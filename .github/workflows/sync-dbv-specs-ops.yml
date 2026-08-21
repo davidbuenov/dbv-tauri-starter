@@ -1,0 +1,51 @@
+name: Sync dbv-specs-ops
+
+on:
+  schedule:
+    # Every Monday at 06:00 UTC
+    - cron: "0 6 * * 1"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  subtree-pull:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configure git identity
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Pull latest dbv-specs-ops via subtree
+        id: subtree
+        run: |
+          set -e
+          BEFORE=$(git rev-parse HEAD)
+          git subtree pull --prefix=dbv-specs-ops https://github.com/davidbuenov/dbv-specs-ops.git master --squash -m "chore: sync dbv-specs-ops framework"
+          AFTER=$(git rev-parse HEAD)
+          if [ "$BEFORE" = "$AFTER" ]; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create Pull Request
+        if: steps.subtree.outputs.changed == 'true'
+        uses: peter-evans/create-pull-request@v6
+        with:
+          branch: chore/sync-dbv-specs-ops
+          title: "chore: sync dbv-specs-ops framework"
+          body: |
+            Trae automáticamente los últimos cambios de [dbv-specs-ops](https://github.com/davidbuenov/dbv-specs-ops) vía `git subtree pull`.
+
+            Revisa el diff dentro de `dbv-specs-ops/` antes de mergear — no debería tocar nada fuera de esa carpeta.
+          commit-message: "chore: sync dbv-specs-ops framework"
+          delete-branch: true

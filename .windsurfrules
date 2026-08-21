@@ -1,0 +1,21 @@
+# Windsurf Rules — dbv-tauri-starter
+
+This project uses **Spec-Driven Development (SDD)** with the **dbv-specs-ops** framework, vendored under `dbv-specs-ops/`. Apply these rules in all interactions.
+
+## Before proposing any code
+
+1. Read `dbv-specs-ops/project.config.md` for project name, author, license and file header template
+2. Read `dbv-specs-ops/docs/SPECIFICATIONS.md` for the current requirements
+3. Read `dbv-specs-ops/docs/ARCHITECTURE.md` for the stack and technical decisions
+4. Read `dbv-specs-ops/memory.md` for qualitative context and technical decisions
+5. Read `dbv-specs-ops/task.md` for the current project state
+
+The full workflow and development rules are in `dbv-specs-ops/docs/MASTER_PROMPT.md`.
+
+## ⚠️ Core Rules (Strong Pointer)
+
+**Read `dbv-specs-ops/docs/MASTER_PROMPT.md` and follow its workflow strictly.**
+
+---
+
+> 🛠️ SDD Framework created by **[David Bueno Vallejo](https://github.com/davidbuenov)** — free and open source · [dbv-specs-ops](https://github.com/davidbuenov/dbv-specs-ops)
