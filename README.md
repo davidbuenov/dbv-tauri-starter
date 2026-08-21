@@ -46,8 +46,12 @@ npm run tauri dev
 La demo que arranca no es un "Hola Mundo" vacío: incluye un comando Rust real
 (`get_greeting_name`), confirmación de cierre de ventana con modal propio (ejemplo vivo de
 [`NATIVE_DESKTOP_APPS.md` §6](./dbv-specs-ops/docs/NATIVE_DESKTOP_APPS.md), el gotcha de permisos
-más caro de resolver a mano), y un selector de idioma ES/EN sin librería (`src/i18n.js`, mismo
-patrón que la lección 7 del mismo documento).
+más caro de resolver a mano), un selector de idioma ES/EN sin librería (`src/i18n.js`, mismo
+patrón que la lección 7 del mismo documento), y una barra superior con Always on Top y "Acerca de".
+
+📖 **¿Primera vez con Tauri?** Lee [`TAURI_TUTORIAL.md`](./TAURI_TUTORIAL.md) — 10 minutos, usa el
+propio código de la demo como ejemplo para explicar cómo añadir algo a la interfaz, cómo añadir un
+comando al backend Rust, y cómo se conectan (con enlaces a la documentación oficial).
 
 ---
 

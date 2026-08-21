@@ -34,13 +34,18 @@
   - [x] Verificado en vivo (UI Automation + capturas + confirmación del usuario): saludo desde Rust al escribir, cambio de idioma ES/EN aplicado a toda la UI, Always on Top con bit `WS_EX_TOPMOST` real confirmado por Win32, panel Acerca de con versión leída de `getVersion()`. RF-06/07/08 (barra superior, chincheta, Acerca de) añadidos y verificados en la misma sesión a petición del usuario ("Hola Mundo empowered").
   - [x] Confirmación final del usuario en la app real: "ya funciona todo bien".
 
-- [ ] **Fase 5: `/code-simplify`**
-  - [ ] Revisión de seguridad estándar (sin secretos, sin dependencias nuevas que auditar).
+- [x] **Fase 5: `/code-simplify`**
+  - [x] `currentWindow`/`aboutVersionEl` cacheados en vez de repetir `getCurrentWindow()`/`getElementById` — consistencia y una llamada menos por interacción.
+  - [x] Revisión de seguridad: sin secretos, sin dependencias nuevas, `name` del comando Rust se muestra vía `textContent` (nunca `innerHTML`) — sin riesgo de XSS.
+  - [x] Verificado en vivo tras el refactor (chincheta + Acerca de por UI Automation) — sin regresión.
 
-- [ ] **Fase 6: `/ship`**
-  - [ ] Actualizar `CHANGELOG.md` de la raíz (`[Sin publicar]` → nueva versión `template-vX.Y.Z`).
-  - [ ] Memory Gate: registrar en `memory.md` la decisión de la demo como ejemplo vivo del gotcha de cierre de ventana.
-  - [ ] Tag `template-vX.Y.Z` siguiente.
+- [x] **RF-09 (añadido a petición del usuario tras el `/ship` inicial): `TAURI_TUTORIAL.md`** — guía de cómo añadir UI/comandos Rust/cómo se conectan, con enlaces oficiales verificados con WebFetch antes de publicarlos.
+
+- [x] **Fase 6: `/ship`**
+  - [x] `CHANGELOG.md` de la raíz ampliado con RF-01..09 y los 2 bugs corregidos, dentro de la sección `template-v0.1.0` (nunca publicada hasta ahora, no reescribe historia pública).
+  - [x] `walkthrough.md` completado (fichero local, gitignored por el framework).
+  - [x] Memory Gate ya hecho en la ronda anterior (lección del bug crítico + método de diagnóstico).
+  - [x] Tag `template-v0.1.0` movido a este commit final y publicado con `git push --tags`.
 
 ---
 

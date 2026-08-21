@@ -8,8 +8,8 @@
 > *Instrucción para la IA: Consulta este archivo al inicio de cada sesión para recuperar el hilo técnico. Actualiza las secciones correspondientes cuando el workflow lo indique (triggers en `/plan`, `/build`, `/test` y gate en `/ship`).*
 
 ## 🎯 Contexto Activo
-- **Estado actual del desarrollo:** `/plan` aprobado para RF-01 a RF-04 (demo mínima funcional + guía de arranque). Pendiente `/build`.
-- **Foco inmediato:** Convertir el "Hola Mundo" vacío del scaffold en un ejemplo vivo del patrón correcto de cierre de ventana con confirmación (el gotcha más caro documentado en `dbv-specs-ops/docs/NATIVE_DESKTOP_APPS.md` §6).
+- **Estado actual del desarrollo:** `template-v0.1.0` publicado (`/ship` completo: RF-01 a RF-09, bug crítico de IIFE corregido y verificado en vivo, `TAURI_TUTORIAL.md` añadido, `/code-simplify` y `/test` en verde).
+- **Foco inmediato:** Ninguno abierto — starter usable como plantilla real. Próximo hito natural: crear el primer proyecto derivado real y volver aquí a confirmar que el patrón de CI (`release-*.yml`) funciona de extremo a extremo (ver Pregunta Abierta resuelta en `docs/SPECIFICATIONS.md` §7).
 
 ## 🏗️ Log de Decisiones Técnicas (ADR Ligero)
 *Registro de por qué se tomaron ciertas rutas (ej. cambios en librerías, arquitectura o patrones).*

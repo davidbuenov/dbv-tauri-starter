@@ -10,9 +10,11 @@
   let demoInputEl;
   let greetMsgEl;
   let discardModalEl;
+  let aboutVersionEl;
   let langSelectEl;
   let aboutModalEl;
   let btnAlwaysOnTop;
+  let currentWindow;
 
   let isDirty = false;
   let closeConfirmPending = false;
@@ -58,14 +60,14 @@
   }
 
   async function toggleAlwaysOnTop() {
-    const current = await getCurrentWindow().isAlwaysOnTop();
-    await getCurrentWindow().setAlwaysOnTop(!current);
+    const current = await currentWindow.isAlwaysOnTop();
+    await currentWindow.setAlwaysOnTop(!current);
     setAlwaysOnTopButtonState(!current);
   }
 
   async function openAboutModal() {
     const version = await getVersion();
-    document.getElementById("about-version").textContent = t("about.version", { version });
+    aboutVersionEl.textContent = t("about.version", { version });
     aboutModalEl.classList.remove("hidden");
   }
 
@@ -104,7 +106,9 @@
     discardModalEl = document.querySelector("#discard-modal");
     langSelectEl = document.querySelector("#lang-select");
     aboutModalEl = document.querySelector("#about-modal");
+    aboutVersionEl = document.querySelector("#about-version");
     btnAlwaysOnTop = document.querySelector("#btn-always-on-top");
+    currentWindow = getCurrentWindow();
 
     // Listeners primero: si alguna llamada async al backend fallara, la interfaz seguiría
     // respondiendo en vez de quedarse muerta sin ningún error visible.
@@ -125,8 +129,8 @@
     langSelectEl.value = getLanguage();
     applyTranslations();
     await updateGreeting();
-    setAlwaysOnTopButtonState(await getCurrentWindow().isAlwaysOnTop());
+    setAlwaysOnTopButtonState(await currentWindow.isAlwaysOnTop());
 
-    await getCurrentWindow().onCloseRequested(handleCloseRequested);
+    await currentWindow.onCloseRequested(handleCloseRequested);
   });
 })();
