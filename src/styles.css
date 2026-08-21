@@ -87,8 +87,138 @@ button {
   outline: none;
 }
 
-#greet-input {
-  margin-right: 5px;
+#demo-input {
+  width: min(320px, 80vw);
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75em 1.5em 0;
+}
+
+.topbar h1 {
+  font-size: 1.1em;
+  margin: 0;
+}
+
+.toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.4em;
+}
+
+.btn-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  background-color: transparent;
+  box-shadow: none;
+  color: inherit;
+}
+
+.btn-icon:hover {
+  background-color: rgba(100, 108, 255, 0.12);
+  border-color: transparent;
+}
+
+.btn-icon.active {
+  color: #396cd8;
+  background-color: rgba(57, 108, 216, 0.15);
+}
+
+.lang-picker select {
+  height: 32px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  padding: 0 0.6em;
+  font-size: 0.85em;
+  font-weight: 600;
+  background-color: transparent;
+  color: inherit;
+  box-shadow: none;
+  cursor: pointer;
+}
+
+.lang-picker select:hover {
+  background-color: rgba(100, 108, 255, 0.12);
+}
+
+.about-updates-hint {
+  font-size: 0.85em;
+  color: #6b6b6b;
+}
+
+.demo-banner {
+  margin: 0.5em 1.5em 0;
+  padding: 0.6em 1em;
+  border-radius: 8px;
+  background-color: #eef2ff;
+  color: #3730a3;
+  font-size: 0.9em;
+}
+
+.dirty-hint {
+  font-size: 0.85em;
+  color: #6b6b6b;
+  max-width: 420px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.hidden {
+  display: none;
+}
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(0, 0, 0, 0.45);
+  z-index: 100;
+}
+
+/* Mismo empate de especificidad que .modal-overlay (una sola clase cada uno) — sin este selector
+   más específico, .hidden pierde contra .modal-overlay por orden de aparición en la hoja. */
+.modal-overlay.hidden {
+  display: none;
+}
+
+.modal-card {
+  background-color: #ffffff;
+  color: #0f0f0f;
+  border-radius: 10px;
+  padding: 1.5em;
+  max-width: 360px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+}
+
+.modal-card h3 {
+  margin-top: 0;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5em;
+  margin-top: 1em;
+}
+
+.modal-actions .danger {
+  background-color: #dc2626;
+  color: #ffffff;
+}
+
+.modal-actions .danger:hover {
+  border-color: #991b1b;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -108,5 +238,47 @@ button {
   }
   button:active {
     background-color: #0f0f0f69;
+  }
+
+  .lang-picker select {
+    color: #ffffff;
+    background-color: transparent;
+    border-color: transparent;
+  }
+
+  .lang-picker select:hover {
+    background-color: rgba(36, 200, 219, 0.15);
+  }
+
+  .lang-picker select option {
+    background-color: #1f1f1f;
+    color: #ffffff;
+  }
+
+  .demo-banner {
+    background-color: #312e81;
+    color: #e0e7ff;
+  }
+
+  .dirty-hint {
+    color: #a3a3a3;
+  }
+
+  .modal-card {
+    background-color: #1f1f1f;
+    color: #f6f6f6;
+  }
+
+  .btn-icon:hover {
+    background-color: rgba(36, 200, 219, 0.15);
+  }
+
+  .btn-icon.active {
+    color: #24c8db;
+    background-color: rgba(36, 200, 219, 0.2);
+  }
+
+  .about-updates-hint {
+    color: #a3a3a3;
   }
 }

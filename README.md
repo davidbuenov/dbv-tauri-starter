@@ -43,6 +43,38 @@ npm install
 npm run tauri dev
 ```
 
+La demo que arranca no es un "Hola Mundo" vacío: incluye un comando Rust real
+(`get_greeting_name`), confirmación de cierre de ventana con modal propio (ejemplo vivo de
+[`NATIVE_DESKTOP_APPS.md` §6](./dbv-specs-ops/docs/NATIVE_DESKTOP_APPS.md), el gotcha de permisos
+más caro de resolver a mano), y un selector de idioma ES/EN sin librería (`src/i18n.js`, mismo
+patrón que la lección 7 del mismo documento).
+
+---
+
+## 🧹 Qué hacer ahora (sustituir la demo por tu app real)
+
+1. **Borra la demo, no la adaptes poco a poco:** en `src/index.html`/`main.js` puedes quitar
+   directamente el `<textarea>` de ejemplo, el mensaje de saludo y el banner "esto es una demo" —
+   son solo para enseñar el patrón. **Conserva**, en cambio, el patrón de `onCloseRequested` +
+   modal propio de `main.js` si tu app también va a tener estado sin guardar (es exactamente el
+   caso más común en apps de escritorio) — cópialo tal cual, ya está resuelto.
+2. **`src/i18n.js`**: si tu app necesita más de dos idiomas o crece de unas pocas decenas de
+   strings, revisa la lección 7 de `NATIVE_DESKTOP_APPS.md` antes de decidir si sigue bastando sin
+   librería. Si te vale, solo tienes que añadir tus propias claves a los objetos `es`/`en`.
+3. **`src-tauri/capabilities/default.json`** se mantiene deliberadamente mínimo (YAGNI) — añade
+   permisos nuevos solo cuando tu código realmente los necesite, nunca preventivamente. Antes de
+   añadir uno, comprueba si ya es un gotcha conocido en
+   [`NATIVE_DESKTOP_APPS.md` §6](./dbv-specs-ops/docs/NATIVE_DESKTOP_APPS.md) (p. ej. impresión en
+   macOS, ventanas creadas dinámicamente).
+4. **Arranca `/spec`** (paso 3 de arriba) para documentar tu app real en
+   `dbv-specs-ops/docs/SPECIFICATIONS.md` — no hace falta esperar a haber borrado la demo primero,
+   pueden ir en paralelo.
+5. **Cuando quieras publicar un instalador**, los 3 workflows de `.github/workflows/` ya están
+   listos (`release-windows.yml`/`-linux.yml`/`-macos.yml`) — solo etiqueta `git tag vX.Y.Z` y
+   empújalo. Sin firma de código por defecto: lee
+   [`MARKETPLACE_PUBLISHING.md`](./dbv-specs-ops/docs/MARKETPLACE_PUBLISHING.md) si necesitas
+   añadirla o publicar en una tienda.
+
 ---
 
 ## 📂 Qué trae esta plantilla
