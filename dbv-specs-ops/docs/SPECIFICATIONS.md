@@ -66,7 +66,7 @@ No aplica — `Agent Readiness (Web)` está marcado `Not Applicable` en `project
 
 - [x] ¿Vanilla JS o un framework con bundler para el frontend del starter? — **Resuelto:** Vanilla JS + sin Tailwind (decisión explícita del usuario, coherente con lo que realmente usa `dbv-md-reader` pese a lo que decía su `ARCHITECTURE.md`).
 - [x] ¿Incluir `tauri-plugin-updater` de fábrica? — **Resuelto:** No, fuera de alcance (§5).
-- [ ] ¿Se ejecuta al menos un `workflow_dispatch` real de cada workflow de CI antes del primer `/ship`, o se acepta el riesgo de "compila en teoría, sin verificar en este repo" para la primera versión? (ver Riesgo 2 en §6).
+- [x] ¿Se ejecuta un `workflow_dispatch` real de cada workflow de CI antes del primer `/ship`? — **Resuelto:** No en este repo. Los 3 `release-{windows,linux,macos}.yml` se disparan con `push: tags: ["v*.*.*"]` — el mismo patrón que usaría este propio repo si algún día se etiquetara una versión de la plantilla (p. ej. `v1.0.0`). Empujar ese tag aquí generaría una Release real de GitHub con instaladores del Hola Mundo literal, sin sentido en un repo que no es un producto publicable. **Decisión:** este repo **nunca empuja tags con el patrón `vX.Y.Z`**; si se necesita versionar la evolución del propio starter, usar un esquema que no case con el trigger (p. ej. `template-v1.0.0`). Verificación de los 3 workflows en esta fase: lint estático (`actionlint` u equivalente) sobre los YAML, sin disparar una Release real. La verificación end-to-end (que de verdad compilen y publiquen instaladores) queda para el primer proyecto derivado real, donde sí tiene sentido publicar una versión — se retoma este repo entonces para confirmar que el patrón copiado funciona.
 
 ## 🧪 8. Criterios de Evaluación y Evals (No Deterministas)
 

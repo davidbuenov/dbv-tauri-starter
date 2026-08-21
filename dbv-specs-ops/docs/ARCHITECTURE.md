@@ -81,8 +81,9 @@ No hay separación domain/application/infrastructure: el "Hola Mundo" no tiene l
 ## ⚠️ Restricciones y Riesgos Técnicos
 
 - **Restricción:** El repo debe seguir siendo clonable/usable como GitHub Template sin pasos manuales previos — cualquier cambio que rompa `npm install && npm run tauri dev` en limpio invalida el propósito del starter.
-- **Riesgo:** Los 3 workflows de CI no se han ejecutado todavía contra este repo concreto (adaptados de `dbv-md-reader`, donde sí están validados). Ver Riesgo 2 y Pregunta Abierta en `docs/SPECIFICATIONS.md`.
-  - **Mitigación:** Lanzar al menos un `workflow_dispatch` real de cada uno antes del primer `/ship`.
+- **Restricción:** Este repo **nunca empuja tags con el patrón `vX.Y.Z`** — los 3 `release-{windows,linux,macos}.yml` se disparan con ese mismo patrón (`push: tags: ["v*.*.*"]`), y ese tag debe quedar reservado para cuando exista un proyecto derivado real con una app que sí tenga sentido publicar. Si se necesita versionar la evolución del propio starter, usar un esquema distinto (p. ej. `template-v1.0.0`) que no case con el trigger.
+- **Riesgo:** Los 3 workflows de CI no se han ejecutado todavía de extremo a extremo (adaptados de `dbv-md-reader`, donde sí están validados, pero nunca disparados en este repo — ver restricción anterior, no se puede probar aquí con una Release real).
+  - **Mitigación:** Verificación estática (`actionlint` u otro linter de GitHub Actions) sobre los 3 YAML en esta fase. La verificación end-to-end queda para el primer proyecto derivado real — se retoma este repo entonces para confirmar que el patrón copiado funciona de verdad.
 - **Riesgo:** El subtree vendorizado de `dbv-specs-ops` puede quedar desfasado.
   - **Mitigación:** Ya implementada — Action semanal + instrucción de arranque de ejecutar `UPGRADE_PROMPT.md` (ver `docs/SPECIFICATIONS.md` §6).
 
