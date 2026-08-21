@@ -1,8 +1,8 @@
-# 🏗 Arquitectura Técnica: [Nombre del Proyecto]
+# 🏗 Arquitectura Técnica: dbv-tauri-starter
 
 > **Fase:** `/plan` (Planificación Técnica)
-> **Estado:** Borrador / Validado
-> **Última Revisión:** [Fecha]
+> **Estado:** Validado
+> **Última Revisión:** 2026-08-21
 
 ---
 
@@ -10,12 +10,12 @@
 
 | Capa | Tecnología | Justificación |
 | --- | --- | --- |
-| **Lenguaje** | [Ej: TypeScript 5.x] | [Ej: Tipado estático, ecosistema maduro] |
-| **Framework principal** | [Ej: Fastify / React] | [Ej: Alto rendimiento / SPA sin complejidad SSR] |
-| **Persistencia** | [Ej: SQLite / PostgreSQL] | [Ej: Sin infra para MVP / producción] |
-| **Autenticación** | [Ej: JWT + bcrypt] | [Ej: Stateless, fácil de escalar] |
-| **Testing** | [Ej: Vitest / Pytest] | [Ej: Rápido, compatible con ESM] |
-| **CI/CD** | [Ej: GitHub Actions] | [Ej: Integrado con el repo] |
+| **Core / Backend** | Rust + Tauri v2 | WebView nativo del SO (WebView2/WebKitGTK/WKWebView) en vez de empaquetar Chromium — instalador ~15-20 MB y RAM en reposo <64 MB frente a Electron. Ver `dbv-specs-ops/docs/NATIVE_DESKTOP_APPS.md` §1. |
+| **Frontend** | Vanilla JS + HTML/CSS, sin bundler | `withGlobalTauri: true`, sin `<script type="module">` — carga instantánea, offline, y no fuerza un framework a proyectos que migren una app web ya escrita en otra tecnología. Ver `dbv-specs-ops/docs/NATIVE_DESKTOP_APPS.md` §3. |
+| **Framework de metodología** | dbv-specs-ops (vendorizado vía `git subtree`) | Da SDD (`/spec`→`/plan`→`/build`→`/test`→`/code-simplify`→`/ship`), persistencia de contexto (`memory.md`/`task.md`) y las guías de arquitectura nativa/CI/marketplace ya generalizadas desde `dbv-md-reader`. |
+| **Empaquetado** | `@tauri-apps/cli` v2, `bundle.targets: "all"` | Resuelve NSIS/`.deb`+`.AppImage`/`.dmg`+`.app` automáticamente según el SO de build, sin lógica condicional propia. |
+| **CI/CD** | GitHub Actions (`tauri-apps/tauri-action@v0`) | 3 workflows por plataforma (`release-windows.yml`/`release-linux.yml`/`release-macos.yml`), patrón "Release como borrador acumulativo". Ver `dbv-specs-ops/docs/NATIVE_APPS_RELEASE_CI.md` §9. |
+| **Testing** | `cargo test` (backend Rust) | Sin framework de tests JS — el frontend del "Hola Mundo" no tiene lógica propia que testear; cada proyecto derivado añade su propia suite cuando implemente funcionalidad real. |
 
 ---
 
@@ -23,19 +23,28 @@
 
 ```text
 /
-├── src/
-│   ├── domain/          # Lógica de negocio pura (sin dependencias externas)
-│   ├── application/     # Casos de uso, orquestación
-│   ├── infrastructure/  # BD, APIs externas, servicios externos
-│   └── interfaces/      # Controladores HTTP, CLI, WebSocket
-├── tests/
-│   ├── unit/
-│   └── integration/
-├── docs/                # Documentación del proyecto (este directorio)
-└── [config files]       # tsconfig, .env.example, etc.
+├── src/                      # Frontend Vanilla JS/HTML/CSS (sin bundler)
+│   ├── index.html
+│   ├── main.js
+│   ├── styles.css
+│   └── assets/
+├── src-tauri/                # Backend Rust + configuración de empaquetado
+│   ├── src/                  # lib.rs / main.rs — comandos #[tauri::command]
+│   ├── capabilities/         # Permisos ACL por ventana (core:*, ver NATIVE_DESKTOP_APPS.md §6)
+│   ├── icons/
+│   └── tauri.conf.json
+├── dbv-specs-ops/            # Framework SDD, vendorizado vía git subtree (no editar a mano salvo /ship del propio framework)
+├── .github/
+│   └── workflows/
+│       ├── sync-dbv-specs-ops.yml   # Sincronización semanal del framework (subtree pull + PR)
+│       ├── release-windows.yml
+│       ├── release-linux.yml
+│       └── release-macos.yml
+├── CLAUDE.md / GEMINI.md / ANTIGRAVITY.md / .windsurfrules / .github/copilot-instructions.md
+└── LICENSE, README.md
 ```
 
-> Adapta esta estructura al stack elegido. Si es un proyecto pequeño, una sola carpeta `src/` plana es suficiente.
+No hay separación domain/application/infrastructure: el "Hola Mundo" no tiene lógica de negocio propia que justifique esa capas — cada proyecto derivado adapta `src-tauri/src/` a la complejidad real de su propia app cuando la especifique.
 
 ---
 
@@ -43,19 +52,20 @@
 
 ### Seguridad
 
-- **Autenticación:** [Ej: JWT con expiración de 1h + refresh token en httpOnly cookie]
-- **Autorización:** [Ej: RBAC — roles definidos en BD]
-- **Datos sensibles:** [Ej: Variables de entorno via `.env`, nunca en código]
+- **Permisos (Tauri ACL):** `capabilities/default.json` con el mínimo necesario para el scaffold (`core:default`) — deliberadamente **sin** ampliar de forma preventiva con permisos como `core:window:allow-destroy` (necesario solo si se implementa `onCloseRequested`) o `core:webview:allow-print` (solo si se usa `window.print()`), ya documentados como gotchas en `dbv-specs-ops/docs/NATIVE_DESKTOP_APPS.md` §6/§9 — YAGNI: añadirlos cuando el proyecto derivado implemente la funcionalidad que los necesita, no antes.
+- **Autenticación/Autorización:** No aplica — app de escritorio local, sin backend propio ni sesión de usuario.
+- **Datos sensibles:** Ninguno en el starter. Si un proyecto derivado añade auto-actualización (`tauri-plugin-updater`), la clave privada de firma nunca debe vivir en el repo — ver `dbv-specs-ops/docs/NATIVE_DESKTOP_APPS.md` §4.
+- **CI:** `permissions: contents: write` acotado a nivel de job en cada workflow de release, no como valor por defecto del repo (`dbv-specs-ops/docs/NATIVE_APPS_RELEASE_CI.md` §4).
 
 ### Estilo de Código
 
-- **Paradigma:** [Ej: Funcional preferente / Orientado a objetos]
-- **Convenciones:** Ver repo de referencia en `MASTER_PROMPT.md`
-- **Complejidad máxima por función:** [Ej: 20 líneas / complejidad ciclomática < 5]
+- **Paradigma:** Rust idiomático (comandos `#[tauri::command]` finos sobre lógica pura testeable) + JS clásico encapsulado en IIFE.
+- **Convenciones:** Ver `dbv-specs-ops/docs/MASTER_PROMPT.md` (Normas de Desarrollo / Estándares de Codificación).
+- **Complejidad:** No aplica un límite específico todavía — el scaffold es mínimo; cada proyecto derivado hereda las normas generales del framework al crecer.
 
 ### Gestión de Estado
 
-- [Ej: Estado del servidor en BD, estado UI en React Context (sin Redux hasta que escale)]
+- No aplica — el "Hola Mundo" no mantiene estado propio más allá de lo que ya gestiona Tauri (ventana única, sin persistencia).
 
 ---
 
@@ -63,46 +73,24 @@
 
 | Servicio | Propósito | Notas / Límites |
 | --- | --- | --- |
-| [Ej: Stripe API] | [Pagos] | [Rate limit: 100 req/s] |
-| [Ej: SendGrid] | [Email transaccional] | [Free tier: 100 emails/día] |
+| GitHub Actions | CI de release por plataforma | Sin firma de código en ninguna plataforma (§8 de `NATIVE_APPS_RELEASE_CI.md`) — SmartScreen/Gatekeeper avisarán al usuario final hasta que un proyecto derivado añada firma. |
+| `github.com/davidbuenov/dbv-specs-ops` | Origen del framework vendorizado | Sincronizado vía `git subtree`, nunca editado directamente dentro de este repo salvo que el cambio sea específico de esta plantilla (p. ej. `project.config.md`). |
 
 ---
 
 ## ⚠️ Restricciones y Riesgos Técnicos
 
-- **Restricción:** [Ej: El despliegue debe ser en un VPS de 1GB RAM — optimizar footprint]
-- **Riesgo:** [Ej: Dependencia de API de terceros sin SLA garantizado]
-  - **Mitigación:** [Ej: Circuit breaker + caché local de 5 min]
+- **Restricción:** El repo debe seguir siendo clonable/usable como GitHub Template sin pasos manuales previos — cualquier cambio que rompa `npm install && npm run tauri dev` en limpio invalida el propósito del starter.
+- **Riesgo:** Los 3 workflows de CI no se han ejecutado todavía contra este repo concreto (adaptados de `dbv-md-reader`, donde sí están validados). Ver Riesgo 2 y Pregunta Abierta en `docs/SPECIFICATIONS.md`.
+  - **Mitigación:** Lanzar al menos un `workflow_dispatch` real de cada uno antes del primer `/ship`.
+- **Riesgo:** El subtree vendorizado de `dbv-specs-ops` puede quedar desfasado.
+  - **Mitigación:** Ya implementada — Action semanal + instrucción de arranque de ejecutar `UPGRADE_PROMPT.md` (ver `docs/SPECIFICATIONS.md` §6).
 
 ---
 
 ## 🤖 Agent Harness (Arnés del Agente)
 
-> Rellena esta sección para configurar la infraestructura, el contexto y las herramientas que rodean al agente de IA para que trabaje de forma segura y autónoma.
-
-### 1. Gestión de Contexto (Context Engineering)
-- **Contexto Estático:** [Ficheros de reglas globales y memory cargados siempre en el arranque (ej: CLAUDE.md, GEMINI.md, memory.md)].
-- **Contexto Dinámico / Skills:** [Lista de módulos de habilidades bajo la estructura `skills/` del Agent Plugin cargados bajo demanda por el agente].
-
-### 2. Herramientas y MCP (Model Context Protocol)
-- **Servidores MCP Requeridos:** [Ej: filesystem, sqlite (para acceso estructurado a datos), github (para gestión de PRs)].
-- **Propósito:** [Ej: Conexión directa a base de datos de staging para consultas de contexto].
-- **Configuración de Herramientas:** Definidas en el descriptor `mcp.json` bajo el estándar Agent Plugins 1.0.0.
-
-### 3. Entorno de Ejecución (Sandboxing)
-- **Aislamiento:** [Define el sandbox donde corre el agente. Ej: Docker local, máquina virtual, o entorno virtual local (venv)].
-- **Límites de Ejecución:** [Límites de coste de tokens, tiempos de timeout o número máximo de iteraciones en comandos asíncronos].
-- **Aislamiento del Plugin:** Soporte para variables `${PLUGIN_ROOT}` y `${PLUGIN_DATA}` en la ejecución del servidor MCP.
-
-### 4. Guardrails Deterministas de Seguridad
-- **Filtros de Código:** [Definición de scripts automáticos (linters, pre-commit hooks con gitleaks, herramientas SAST) para evitar la filtración de secretos o dependencias ficticias generadas por la IA].
-- **Políticas de Commit/Push:** [Ej: Bloquear commits que contengan strings que parezcan API keys o passwords].
-
-### 5. Interfaz Externa para Agentes (Agent Readiness)
-*Define la arquitectura y métodos que permiten a agentes externos descubrir y consumir los servicios del sitio:*
-- **Autodescubrimiento**: [Describe cómo se exponen los recursos de IA (ej: cabecera Link en el servidor web inyectando la relación agent-plugin pointing to plugin.json, api-catalog, etc.)].
-- **Estructura del Plugin**: Exponer la carpeta `.well-known/agent-plugin/` con los descriptores universales `plugin.json` y `mcp.json`.
-- **Formato del Contenido**: [Define las políticas de optimización de contexto, tales como la negociación de formato text/markdown y la navegación semántica en llms.txt].
+No aplica en esta fase — el starter no expone servidores MCP propios, no tiene lógica de dominio que un agente necesite orquestar más allá de lo que ya cubren los ficheros de activación estándar del framework (`CLAUDE.md`/`GEMINI.md`/etc., ya presentes en la raíz) y `dbv-specs-ops/memory.md`/`task.md`. Un proyecto derivado que sí necesite un MCP local o skills propias los añade al especificar su app real, siguiendo `dbv-specs-ops/docs/AGENT_PLUGINS.md`.
 
 ---
 

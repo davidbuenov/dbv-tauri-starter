@@ -7,13 +7,13 @@
 
 ## Project Identity
 
-- **Name:** [Project Name]
-- **Description:** [One-line description]
-- **Author / Company:** [Your Name or Company · https://yourwebsite.com]
-- **License:** [MIT]
-- **Languages:** [e.g. Python, JavaScript, HTML, CSS]
-- **Technologies / Stack:** [e.g. FastAPI, React, PostgreSQL]
-- **Agent Readiness (Web):** [Yes / No / Not Applicable]
+- **Name:** dbv-tauri-starter
+- **Description:** Plantilla de proyecto Tauri v2 con dbv-specs-ops ya integrado, punto de partida para apps de escritorio nativas multiplataforma
+- **Author / Company:** David Bueno Vallejo · https://github.com/davidbuenov
+- **License:** MIT
+- **Languages:** Rust, JavaScript, HTML, CSS
+- **Technologies / Stack:** Tauri v2 (WebView nativo del SO), Vanilla JS/HTML/CSS sin bundler
+- **Agent Readiness (Web):** Not Applicable
 - **Framework Version:** 2.5.0
 
 
