@@ -9,6 +9,7 @@ Toda la documentación, normas y especificaciones residen en el subdirectorio `d
 | `dbv-specs-ops/docs/MASTER_PROMPT.md` | Workflow obligatorio, normas y límites de desarrollo |
 | `dbv-specs-ops/docs/SPECIFICATIONS.md` | Requisitos del proyecto actual |
 | `dbv-specs-ops/docs/ARCHITECTURE.md` | Stack técnico |
+| `dbv-specs-ops/docs/WEB_TO_DESKTOP_MIGRATION.md` | Decisiones estratégicas para migrar una app web **que ya existe** a escritorio — se lee **antes** que `NATIVE_DESKTOP_APPS.md` |
 | `dbv-specs-ops/docs/NATIVE_DESKTOP_APPS.md` | Patrón de arquitectura para apps de escritorio nativas (Tauri v2) |
 | `dbv-specs-ops/docs/NATIVE_APPS_RELEASE_CI.md` | CI/CD multiplataforma (GitHub Actions) para compilar y publicar binarios nativos |
 | `dbv-specs-ops/docs/MARKETPLACE_PUBLISHING.md` | Publicación en marketplaces (Microsoft Store, Uptodown, etc.) |
@@ -24,5 +25,14 @@ Antes de escribir ninguna línea de código de la app final:
 
 1. Di a tu IA: **"Lee `dbv-specs-ops/docs/UPGRADE_PROMPT.md` y actualiza el framework"** — esto garantiza que partes de la versión más reciente de dbv-specs-ops aunque haya pasado tiempo desde que se sincronizó esta plantilla.
 2. Escribe `/spec` para arrancar la entrevista de especificación de tu aplicación real.
+
+## 🔁 Si el objetivo es migrar una app web que **ya existe**
+
+Lo anterior no aplica. **La plantilla viaja hacia el repo de esa app, nunca al revés** — clonar esta
+plantilla para meter dentro una app existente destruye su historial, issues y URLs.
+
+Lee `dbv-specs-ops/docs/WEB_TO_DESKTOP_MIGRATION.md` **antes** que `NATIVE_DESKTOP_APPS.md` y resuelve
+sus cuatro decisiones previas (arquetipo de la app, repo de destino, escritorio-solo vs dual, y Rust vs
+sidecar por función) antes de proponer stack o escribir código.
 
 > 🛠️ Framework SDD creado por **[David Bueno Vallejo](https://github.com/davidbuenov)** · [dbv-specs-ops](https://github.com/davidbuenov/dbv-specs-ops)

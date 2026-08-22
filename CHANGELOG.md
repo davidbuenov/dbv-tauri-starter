@@ -11,6 +11,25 @@ el prefijo `template-v` en los tags de git (`template-vX.Y.Z`) — deliberadamen
 
 ## [Sin publicar] / [Unreleased]
 
+### Changed
+- **`README.md` §4 reescrito — la migración de una app web existente decía la dirección equivocada.**
+  Antes sugería clonar la plantilla y sustituir `src/` por el frontend propio; eso implica un repo nuevo
+  y la pérdida de historial, issues, stars, releases y URLs de la app original. Ahora deja explícito que
+  **la plantilla viaja hacia el repo existente** (rama `feat/tauri-desktop` + copia de `src-tauri/`, los
+  3 workflows de release y `dbv-specs-ops/`), enumera las 4 decisiones estratégicas previas y enlaza a la
+  nueva guía del framework. Nota de desvío añadida en la cabecera y §1 marcada como *proyectos nuevos*.
+- `CLAUDE.md` y `GEMINI.md`: nueva fila de `WEB_TO_DESKTOP_MIGRATION.md` en la tabla de documentos, y
+  sección en `CLAUDE.md` que instruye a la IA a leerla **antes** que `NATIVE_DESKTOP_APPS.md` cuando el
+  objetivo es migrar una app web que ya existe.
+
+### Added
+- `dbv-specs-ops` sincronizado a **v2.6.0**, que incorpora
+  [`docs/WEB_TO_DESKTOP_MIGRATION.md`](./dbv-specs-ops/docs/WEB_TO_DESKTOP_MIGRATION.md): clasificación
+  en 4 arquetipos de app, dirección de la adopción, modo dual con capa de adaptación única (`api.js`),
+  regla Rust vs sidecar por función, coste oculto del sidecar sobre el tamaño del instalador, auditoría
+  de licencias copyleft y orden de migración por riesgo de tubería. Añade además dos Phase Gates en
+  `MASTER_PROMPT.md` (Bootstrap §7 y `/plan` Paso 3).
+
 ---
 
 ## [template-v0.1.0] — 2026-08-21

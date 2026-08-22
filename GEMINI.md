@@ -9,6 +9,7 @@ All documentation, rules and specifications live in the `dbv-specs-ops/` subdire
 | `dbv-specs-ops/docs/MASTER_PROMPT.md` | Mandatory workflow, rules and boundaries |
 | `dbv-specs-ops/docs/SPECIFICATIONS.md` | Current project requirements |
 | `dbv-specs-ops/docs/ARCHITECTURE.md` | Stack and technical decisions |
+| `dbv-specs-ops/docs/WEB_TO_DESKTOP_MIGRATION.md` | Strategic decisions for migrating an **existing** web app to desktop — read **before** `NATIVE_DESKTOP_APPS.md` |
 | `dbv-specs-ops/docs/NATIVE_DESKTOP_APPS.md` | Native desktop app architecture pattern (Tauri v2) |
 | `dbv-specs-ops/docs/NATIVE_APPS_RELEASE_CI.md` | Cross-platform GitHub Actions CI/CD for native binaries |
 | `dbv-specs-ops/docs/MARKETPLACE_PUBLISHING.md` | Marketplace publishing guide (Microsoft Store, Uptodown, etc.) |

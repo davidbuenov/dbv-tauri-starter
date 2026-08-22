@@ -6,11 +6,13 @@ Plantilla de proyecto: **Tauri v2 + WebView nativo del sistema (WebView2/WebKitG
 
 Nace del conocimiento real extraído de [dbv-md-reader](https://github.com/davidbuenov/dbv-md-reader), llevado hasta publicación en Microsoft Store y Uptodown — ese conocimiento vive ahora generalizado en el propio framework: [`dbv-specs-ops/docs/NATIVE_DESKTOP_APPS.md`](./dbv-specs-ops/docs/NATIVE_DESKTOP_APPS.md), [`NATIVE_APPS_RELEASE_CI.md`](./dbv-specs-ops/docs/NATIVE_APPS_RELEASE_CI.md) y [`MARKETPLACE_PUBLISHING.md`](./dbv-specs-ops/docs/MARKETPLACE_PUBLISHING.md).
 
+> 🔁 **¿Vienes con una app web que ya existe?** Los pasos 1-3 de abajo son para proyectos nuevos. Salta directamente al [**paso 4**](#4-migrando-una-app-web-que-ya-existe-no-sigas-los-pasos-de-arriba) — la plantilla **no** se clona para meter tu app dentro.
+
 ---
 
 ## 🚀 Primeros pasos
 
-### 1. Crea tu proyecto a partir de esta plantilla
+### 1. Crea tu proyecto a partir de esta plantilla *(proyectos nuevos)*
 
 Usa el botón **"Use this template"** de GitHub, o clona y desvincula:
 
@@ -32,9 +34,37 @@ Esto trae cualquier versión de `dbv-specs-ops` publicada después de que se sin
 
 Escribe `/spec` y sigue la entrevista de arranque. La IA rellenará `dbv-specs-ops/docs/SPECIFICATIONS.md` y `dbv-specs-ops/docs/ARCHITECTURE.md` con los detalles concretos de tu aplicación.
 
-### 4. Migrando una app web existente en vez de empezar de cero
+### 4. ¿Migrando una app web que **ya existe**? No sigas los pasos de arriba
 
-Si ya tienes una app web (React, Vue, vanilla, lo que sea) que quieres envolver como app de escritorio, sustituye el contenido de `src/` por tu build de frontend y sigue [`dbv-specs-ops/docs/NATIVE_DESKTOP_APPS.md`](./dbv-specs-ops/docs/NATIVE_DESKTOP_APPS.md) para adaptar los comandos Rust de `src-tauri/` a las necesidades de tu app (acceso a filesystem, watchers, etc.).
+> ⚠️ **No clones esta plantilla para meter dentro tu app web.** Perderías historial, issues, stars,
+> releases y las URLs que la gente ya tiene. **La plantilla viaja hacia tu repo, no al revés.**
+
+Si ya tienes una app web funcionando (React, Vue, vanilla, con o sin backend propio), trabaja **en su
+propio repositorio**, en una rama `feat/tauri-desktop`, y copia hacia ella solo tres cosas de aquí:
+
+1. `src-tauri/` completo (config, `Cargo.toml`, iconos, `capabilities/`).
+2. `.github/workflows/release-{windows,macos,linux}.yml`.
+3. `dbv-specs-ops/` — **salvo que tu repo ya lo tenga**, en cuyo caso ejecuta su `UPGRADE_PROMPT.md`
+   en vez de duplicarlo.
+
+📖 **Antes de copiar nada, lee
+[`dbv-specs-ops/docs/WEB_TO_DESKTOP_MIGRATION.md`](./dbv-specs-ops/docs/WEB_TO_DESKTOP_MIGRATION.md).**
+Resuelve las cuatro decisiones que determinan el coste real de la migración, y que salen carísimas si se
+descubren a mitad de camino:
+
+| # | Decisión |
+|---|---|
+| 1 | **Qué arquetipo es tu app** (estática / SPA con bundler / servidor local ligero / servidor local pesado) — determina todo lo demás |
+| 2 | **En qué repo se trabaja** (el tuyo, siempre) |
+| 3 | **Si el escritorio sustituye a la web o convive con ella** — por defecto convive, y el patrón de capa de adaptación que lo hace barato |
+| 4 | **Qué se hace con un backend que no es Rust** — reescribirlo o empaquetarlo como *sidecar*, decidido **por función** |
+
+Ese documento cubre además el coste oculto de los sidecars sobre el tamaño del instalador, la auditoría de
+licencias copyleft antes de invertir, y en qué orden migrar si tienes varias apps que convertir.
+
+Solo cuando esas decisiones estén tomadas pasa a
+[`NATIVE_DESKTOP_APPS.md`](./dbv-specs-ops/docs/NATIVE_DESKTOP_APPS.md), que explica **cómo** se construye
+la app nativa.
 
 ### 5. Desarrollo local
 
