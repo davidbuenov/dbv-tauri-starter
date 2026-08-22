@@ -11,6 +11,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [2.6.0] — 2026-08-22
+
+### Added
+- **Estrategia de Migración de Apps Web Existentes a Escritorio Nativo**:
+  - Nueva guía [docs/WEB_TO_DESKTOP_MIGRATION.md](./docs/WEB_TO_DESKTOP_MIGRATION.md), que cubre las decisiones **previas** a `NATIVE_DESKTOP_APPS.md` cuando el código web ya existe y ya tiene usuarios: clasificación en 4 arquetipos (estática pura / SPA con bundler / servidor local ligero / servidor local pesado) como paso 0 que determina coste y estrategia; dirección de la adopción (la plantilla viaja hacia el repo existente, nunca al revés, para no perder historial, issues y URLs); un repo por app frente a monorepo; modo dual escritorio+web como opción por defecto con el patrón de **capa de adaptación única** (`api.js` con detección `window.__TAURI__` y enrutado a `invoke()` o `fetch`) como el único punto donde el coste del modo dual se concentra; regla de decisión **Rust vs sidecar aplicada por función, no por aplicación**; montaje del sidecar (`bundle.externalBin`, cierre explícito del proceso hijo, puerto no cableado, congelado en el runner de CI de cada plataforma); el coste oculto del sidecar de ML sobre el tamaño del instalador con 3 estrategias de provisionamiento; auditoría de licencias copyleft como decisión arquitectónica previa a invertir; orden de migración por **riesgo de tubería** en portfolios de varias apps; y checklist de migración de 12 puntos.
+  - `docs/README.md`: índice y diagrama de flujo de documentos actualizados con el nuevo documento, situado **antes** de `NATIVE_DESKTOP_APPS.md` en el flujo.
+- **Integración de Phase Gates en el Master Prompt**:
+  - `docs/MASTER_PROMPT.md`: Bootstrap §7 obliga a resolver las 4 decisiones previas de `WEB_TO_DESKTOP_MIGRATION.md` antes de proponer stack cuando ya existe código web funcionando.
+  - `docs/MASTER_PROMPT.md`: Nuevo **Gate de migración web → escritorio** en `/plan` (Paso 3), que exige registrar por escrito arquetipo, repositorio de destino, modo dual vs sustitución y decisión Rust/sidecar por función — más estrategia de provisionamiento y auditoría de licencias si hay sidecar, **antes** de escribir código.
+- **Actualización de Índices y Herramientas de Migración**:
+  - `README.md`: tablas de documentos (EN y ES) actualizadas.
+  - `docs/UPGRADE_PROMPT.md`: Manifest actualizado a v2.6.0.
+  - `project.config.md`: Versión incrementada a `2.6.0`.
+
+---
+
+## [2.5.1] — 2026-08-21
+
+### Added
+- **`docs/NATIVE_DESKTOP_APPS.md`**:
+  - Nueva §6 "Trampas concretas de Tauri v2 — permisos, WebView y threading": 8 gotchas reales de permisos (`core:window:allow-destroy` para `onCloseRequested`, glob de `capabilities.*.windows` para ventanas creadas en tiempo de ejecución), `window.confirm()`/`window.alert()` asíncronos y rotos en `tauri-plugin-dialog` 2.7.2, caché agresiva de WebView2 entre relanzamientos del proceso, reentrancia de `run_on_main_thread()` llamado ya desde el hilo principal, orden no garantizado entre la respuesta de un `invoke()` y un evento de watcher en segundo plano, `label` obligatorio por ventana, y `RunEvent::Opened` para asociación de ficheros en macOS (no vale leer `argv`).
+  - Ítem 9 añadido: `core:webview:allow-print` exigido por WKWebView (macOS) para `window.print()`, sin equivalente en WebView2 (Windows) — un permiso probado en una plataforma no cubre necesariamente las otras dos.
+  - §5 ampliada con la diferencia de comportamiento de asociación de archivos entre `.deb` (declarativo vía `fileAssociations`, no verificable sin hardware Linux real) y `.AppImage` (portátil por diseño, sin integración automática sin `AppImageLauncher` — limitación del formato, no un bug).
+- **`docs/MARKETPLACE_PUBLISHING.md`**:
+  - Nueva §6 "NSIS (instalador Windows) — trampas reales de personalización": qué es alcanzable por configuración declarativa (`sidebarImage`/`headerImage`, `installerHooks`, `bundle.publisher`) frente a lo que exige forkear la plantilla `.nsi` completa (texto de páginas, checkboxes de componentes propios), `XPStyle` para temas activos de Windows, `fileAssociations` sin opt-in nativo, falta de `SHChangeNotify` tras registrar la asociación, ProgId huérfano entre versiones, y caché de build que no reincrusta un icono regenerado.
+  - Nueva §7 "MSIX / identidad de paquete para tiendas": coincidencia obligatoria entre el nombre de binario compilado y el nombre visible del manifiesto, y reserva de nombres técnicos adicionales en la consola de la tienda cuando difieren del nombre comercial.
+- **`docs/NATIVE_APPS_RELEASE_CI.md`**:
+  - Nueva sección con plantillas completas y copiables de workflow de GitHub Actions (`release-windows.yml`, `release-linux.yml`, `release-macos.yml`) validadas contra ejecuciones reales — no solo fragmentos sueltos como en versiones anteriores del documento.
+- **Actualización de Herramientas de Migración**:
+  - `docs/UPGRADE_PROMPT.md`: Manifest actualizado a v2.5.1.
+  - `project.config.md`: Versión incrementada a `2.5.1`.
+
+---
+
 ## [2.5.0] — 2026-08-13
 
 ### Added
@@ -272,7 +306,9 @@ Initial public release of the **dbv-specs-ops** SDD framework.
 
 ---
 
-[Sin publicar]: https://github.com/davidbuenov/dbv-specs-ops/compare/v2.5.0...HEAD
+[Sin publicar]: https://github.com/davidbuenov/dbv-specs-ops/compare/v2.6.0...HEAD
+[2.6.0]: https://github.com/davidbuenov/dbv-specs-ops/compare/v2.5.1...v2.6.0
+[2.5.1]: https://github.com/davidbuenov/dbv-specs-ops/compare/v2.5.0...v2.5.1
 [2.5.0]: https://github.com/davidbuenov/dbv-specs-ops/compare/v2.4.0...v2.5.0
 [2.4.0]: https://github.com/davidbuenov/dbv-specs-ops/compare/v2.3.0...v2.4.0
 [2.3.0]: https://github.com/davidbuenov/dbv-specs-ops/compare/v2.2.0...v2.3.0
