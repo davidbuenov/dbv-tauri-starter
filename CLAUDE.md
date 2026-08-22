@@ -31,8 +31,9 @@ Antes de escribir ninguna línea de código de la app final:
 Lo anterior no aplica. **La plantilla viaja hacia el repo de esa app, nunca al revés** — clonar esta
 plantilla para meter dentro una app existente destruye su historial, issues y URLs.
 
-Lee `dbv-specs-ops/docs/WEB_TO_DESKTOP_MIGRATION.md` **antes** que `NATIVE_DESKTOP_APPS.md` y resuelve
-sus cuatro decisiones previas (arquetipo de la app, repo de destino, escritorio-solo vs dual, y Rust vs
-sidecar por función) antes de proponer stack o escribir código.
+Ejecuta [`MIGRATION_PROMPT.md`](./MIGRATION_PROMPT.md) (raíz de este repo): 9 fases con puertas de parada,
+desde clasificar la app leyendo sus ficheros reales hasta publicar el primer instalador. Su base
+conceptual es `dbv-specs-ops/docs/WEB_TO_DESKTOP_MIGRATION.md`, que se lee **antes** que
+`NATIVE_DESKTOP_APPS.md`.
 
 > 🛠️ Framework SDD creado por **[David Bueno Vallejo](https://github.com/davidbuenov)** · [dbv-specs-ops](https://github.com/davidbuenov/dbv-specs-ops)

@@ -39,32 +39,33 @@ Escribe `/spec` y sigue la entrevista de arranque. La IA rellenará `dbv-specs-o
 > ⚠️ **No clones esta plantilla para meter dentro tu app web.** Perderías historial, issues, stars,
 > releases y las URLs que la gente ya tiene. **La plantilla viaja hacia tu repo, no al revés.**
 
-Si ya tienes una app web funcionando (React, Vue, vanilla, con o sin backend propio), trabaja **en su
-propio repositorio**, en una rama `feat/tauri-desktop`, y copia hacia ella solo tres cosas de aquí:
+No tienes que copiar nada a mano. **Ve al repositorio de tu app web y dile a tu IA:**
 
-1. `src-tauri/` completo (config, `Cargo.toml`, iconos, `capabilities/`).
-2. `.github/workflows/release-{windows,macos,linux}.yml`.
-3. `dbv-specs-ops/` — **salvo que tu repo ya lo tenga**, en cuyo caso ejecuta su `UPGRADE_PROMPT.md`
-   en vez de duplicarlo.
+> *"Lee [`MIGRATION_PROMPT.md`](https://github.com/davidbuenov/dbv-tauri-starter/blob/master/MIGRATION_PROMPT.md)
+> de <https://github.com/davidbuenov/dbv-tauri-starter> y sigue sus fases para convertir este repositorio
+> en una app de escritorio nativa."*
 
-📖 **Antes de copiar nada, lee
-[`dbv-specs-ops/docs/WEB_TO_DESKTOP_MIGRATION.md`](./dbv-specs-ops/docs/WEB_TO_DESKTOP_MIGRATION.md).**
-Resuelve las cuatro decisiones que determinan el coste real de la migración, y que salen carísimas si se
-descubren a mitad de camino:
+[`MIGRATION_PROMPT.md`](./MIGRATION_PROMPT.md) es un prompt ejecutable de 9 fases con puertas de parada:
+clasifica tu app leyendo sus ficheros reales, te hace tomar las decisiones estratégicas **antes** de tocar
+código, trae los artefactos de esta plantilla a tu repo, conecta tu frontend, y verifica que tanto la app
+nativa como el modo web siguen funcionando. Cubre también los detalles que se olvidan y cuestan horas
+(colisión de tags de release, identidad del bundle, permisos, cierre del proceso del sidecar).
+
+Lo que ese prompt decide por ti, resumido:
 
 | # | Decisión |
-|---|---|
+| --- | --- |
 | 1 | **Qué arquetipo es tu app** (estática / SPA con bundler / servidor local ligero / servidor local pesado) — determina todo lo demás |
 | 2 | **En qué repo se trabaja** (el tuyo, siempre) |
-| 3 | **Si el escritorio sustituye a la web o convive con ella** — por defecto convive, y el patrón de capa de adaptación que lo hace barato |
+| 3 | **Si el escritorio sustituye a la web o convive con ella** — por defecto convive, con el patrón de capa de adaptación que lo hace barato |
 | 4 | **Qué se hace con un backend que no es Rust** — reescribirlo o empaquetarlo como *sidecar*, decidido **por función** |
 
-Ese documento cubre además el coste oculto de los sidecars sobre el tamaño del instalador, la auditoría de
-licencias copyleft antes de invertir, y en qué orden migrar si tienes varias apps que convertir.
-
-Solo cuando esas decisiones estén tomadas pasa a
-[`NATIVE_DESKTOP_APPS.md`](./dbv-specs-ops/docs/NATIVE_DESKTOP_APPS.md), que explica **cómo** se construye
-la app nativa.
+📖 El razonamiento completo detrás de esas decisiones —incluido el coste oculto de los sidecars sobre el
+tamaño del instalador, la auditoría de licencias copyleft y en qué orden migrar si tienes varias apps— vive
+en el framework:
+[`dbv-specs-ops/docs/WEB_TO_DESKTOP_MIGRATION.md`](./dbv-specs-ops/docs/WEB_TO_DESKTOP_MIGRATION.md).
+Y una vez tomadas, [`NATIVE_DESKTOP_APPS.md`](./dbv-specs-ops/docs/NATIVE_DESKTOP_APPS.md) explica **cómo**
+se construye la app nativa.
 
 ### 5. Desarrollo local
 
@@ -119,6 +120,8 @@ comando al backend Rust, y cómo se conectan (con enlaces a la documentación of
 | `dbv-specs-ops/` | Framework SDD completo, vendorizado vía `git subtree` desde [davidbuenov/dbv-specs-ops](https://github.com/davidbuenov/dbv-specs-ops) |
 | `CLAUDE.md`, `GEMINI.md`, `ANTIGRAVITY.md`, `.windsurfrules`, `.github/copilot-instructions.md` | Ficheros de activación por plataforma IA, ya apuntando a `dbv-specs-ops/` |
 | `.github/workflows/sync-dbv-specs-ops.yml` | Action periódica que trae lo último de `dbv-specs-ops` y abre un PR si hay cambios |
+| [`MIGRATION_PROMPT.md`](./MIGRATION_PROMPT.md) | Prompt ejecutable de 9 fases para que una IA añada escritorio nativo a **una app web que ya existe**, trabajando en el repo de esa app |
+| [`TAURI_TUTORIAL.md`](./TAURI_TUTORIAL.md) | Tutorial de 10 minutos usando la propia demo como ejemplo |
 
 ## 🔄 Cómo se mantiene esta plantilla actualizada
 
