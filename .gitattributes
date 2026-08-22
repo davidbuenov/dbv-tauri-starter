@@ -1,0 +1,20 @@
+# Estrategia de merge para el subtree de dbv-specs-ops
+#
+# `dbv-specs-ops/` se vendoriza vía `git subtree pull` (ver .github/workflows/sync-dbv-specs-ops.yml).
+# Tres de sus ficheros son PLANTILLAS en el repo del framework pero ESTADO REAL en este repo:
+# los rellenamos con la identidad y el progreso del propio starter. Sin esta regla, cada vez que el
+# framework toca sus plantillas el `subtree pull` entra en conflicto y la Action falla sin abrir PR.
+#
+# `merge=ours` = en un merge, la versión de ESTE repo siempre gana para estos ficheros.
+#
+# ⚠️ Esto NO basta por sí solo: el driver `ours` no viene definido de fábrica en git. Hay que ejecutar
+#    `git config merge.ours.driver true`
+# en cada clon que vaya a hacer el subtree pull. El workflow ya lo hace; si lo haces a mano en local,
+# ejecútalo una vez en tu clon o el conflicto volverá.
+#
+# ⚠️ Efecto secundario deliberado: el campo `Framework Version` de project.config.md tampoco se
+#    actualizará solo. Se sube a mano al revisar el PR de sync, o vía docs/UPGRADE_PROMPT.md.
+
+dbv-specs-ops/project.config.md merge=ours
+dbv-specs-ops/memory.md         merge=ours
+dbv-specs-ops/task.md           merge=ours

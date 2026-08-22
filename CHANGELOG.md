@@ -29,6 +29,19 @@ el prefijo `template-v` en los tags de git (`template-vX.Y.Z`) — deliberadamen
   de licencias copyleft y orden de migración por riesgo de tubería. Añade además dos Phase Gates en
   `MASTER_PROMPT.md` (Bootstrap §7 y `/plan` Paso 3).
 
+### Fixed
+- **El sync semanal del framework estaba roto de facto.** `dbv-specs-ops/project.config.md`, `memory.md`
+  y `task.md` son **plantillas** en el repo del framework pero **estado real** en este repo (identidad y
+  progreso del propio starter). Cada vez que el framework tocaba sus plantillas, el `git subtree pull` de
+  `sync-dbv-specs-ops.yml` entraba en conflicto de contenido y el paso fallaba **sin abrir ningún PR** —
+  el fallo era silencioso porque nadie mira una Action programada que no produce salida. Resuelto con un
+  `.gitattributes` en la raíz que marca esos tres ficheros como `merge=ours`.
+  **El `.gitattributes` no basta por sí solo:** el driver `ours` no viene definido de fábrica en git
+  (verificado: sin definirlo, la regla se ignora y el conflicto se produce igual), así que el workflow
+  ejecuta ahora `git config merge.ours.driver true` antes del pull. El cuerpo del PR de sync avisa además
+  de que el campo `Framework Version` hay que subirlo a mano, ya que esos ficheros dejan de actualizarse
+  solos por diseño.
+
 ### Changed
 - **`README.md` §4 reescrito — la migración de una app web existente decía la dirección equivocada.**
   Antes sugería clonar la plantilla y sustituir `src/` por el frontend propio; eso implica un repo nuevo

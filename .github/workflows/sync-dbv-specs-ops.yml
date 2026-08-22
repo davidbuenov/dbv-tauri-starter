@@ -24,6 +24,13 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
+      # El driver de merge `ours` NO viene definido de fábrica en git: sin esta línea, las reglas
+      # `merge=ours` del .gitattributes de la raíz se ignoran y el subtree pull entra en conflicto
+      # en project.config.md / memory.md / task.md (plantillas en el framework, estado real aquí),
+      # haciendo fallar el paso sin abrir ningún PR. Ver .gitattributes para el razonamiento.
+      - name: Define the `ours` merge driver (requerido por .gitattributes)
+        run: git config merge.ours.driver true
+
       - name: Pull latest dbv-specs-ops via subtree
         id: subtree
         run: |
@@ -45,6 +52,8 @@ jobs:
           title: "chore: sync dbv-specs-ops framework"
           body: |
             Trae automáticamente los últimos cambios de [dbv-specs-ops](https://github.com/davidbuenov/dbv-specs-ops) vía `git subtree pull`.
+
+            ⚠️ **`dbv-specs-ops/project.config.md`, `memory.md` y `task.md` NO se actualizan en este PR** — están marcados `merge=ours` en `.gitattributes` porque aquí contienen el estado real del starter, no las plantillas del framework. Si esta sincronización trae una versión nueva del framework, **sube a mano el campo `Framework Version` de `project.config.md`**.
 
             Revisa el diff dentro de `dbv-specs-ops/` antes de mergear — no debería tocar nada fuera de esa carpeta.
           commit-message: "chore: sync dbv-specs-ops framework"
