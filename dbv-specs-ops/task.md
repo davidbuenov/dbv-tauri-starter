@@ -51,7 +51,7 @@
 
 ## 🔄 Context Snapshot / Snapshot de Contexto
 
-> **Last update / Última actualización:** 2026-08-21
-> **Exact point / Punto exacto:** `/plan` aprobado, `implementation_plan.md` escrito. Nada de `/build` ejecutado todavía.
-> **Pending / Pendiente:** Los 6 pasos de `/build` + verificación manual en `tauri dev`.
-> **Next step / Próximo paso:** Empezar por el paso 1 (permiso en `capabilities/default.json`) antes que ningún otro cambio, por el orden que exige la mitigación del Riesgo 1 del Adversarial Review.
+> **Last update / Última actualización:** 2026-08-28
+> **Exact point / Punto exacto:** **3 apps ya en tienda** construidas o migradas con este starter: `dbv-md-reader` (v0.13.1), `dbv-teleprompter` (v0.2.0, MSIX + Partner Center) y `eer-studio` (v1.4.0). Framework subido a **v2.7.0** con la cosecha de lecciones de las tres (ver ADR 2026-08-28) — commit local en `dbv-specs-ops` y sincronizado a este repo; **sin push a `origin` en ninguno de los dos**, pendiente de revisión del usuario.
+> **Pending / Pendiente:** (1) Push de `dbv-specs-ops` — 3 commits locales por delante de `origin`. (2) `dbv-img2webp` tiene el framework vendorizado en **v2.3.0** pese a un commit del 22-ago que dice haberlo subido a v2.6.0: sync de subtree fallido en silencio, hay que reejecutar `UPGRADE_PROMPT.md` ahí. (3) `unreal-smart-cleaner` (item 2 del roadmap) sigue sin empezar, congelado desde 2024.
+> **Next step / Próximo paso:** Planificar la migración de **`dbv-pdf2deck`** (prioridad del usuario). Arquetipo D — FastAPI + PyMuPDF + easyocr + torch. Dos bloqueantes a resolver **antes** de escribir código: la licencia AGPL-3.0 de PyMuPDF frente a la distribución en tienda, y la estrategia de instalador para un sidecar de varios GB (ver `WEB_TO_DESKTOP_MIGRATION.md` §5 y §6).
