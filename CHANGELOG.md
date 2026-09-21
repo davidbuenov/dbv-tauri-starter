@@ -11,6 +11,109 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [2.8.0] — 2026-09-01
+
+Integración curada del [AI-Native SDLC Playbook (Anthropic)](https://claude.com/blog/the-ai-native-sdlc-playbook): cierre autónomo del loop, revisión de código por pases con severidad y guardarraíles deterministas — todo agnóstico de proveedor y opcional salvo el gate de revisión que ya existía. Incluye además un fix de usabilidad reportado en el uso real del framework: los comandos de fase (`/build`, etc.) escritos sin texto adicional no se interpretaban de forma fiable.
+
+### Added
+- **`docs/MAINTAIN.md` — Fase 7 (opcional, desactivada por defecto).** Cierra el ciclo Spec→Ship sin
+  disparo humano: un detector determinista (CI/cron sobre una métrica) invoca a la IA en modo solo lectura
+  para diagnosticar una desviación y redactarla como entrada `[Detectado automáticamente]` en
+  `SPECIFICATIONS.md`, que reentra el ciclo por `/plan`. Nunca despliega ni hace merge por sí sola.
+- **`docs/REVIEW.md`.** Tres pases de revisión con severidad (Bugs / Seguridad / Cumplimiento,
+  Crítico/Importante/Nit) enganchados a `/code-simplify`; lo Crítico bloquea `/ship`. El pase Cumplimiento
+  audita explícitamente, función por función, los `<coding_standards>` de `MASTER_PROMPT.md` (un solo
+  `return` + guard clauses, patrón Result, tipado estricto) — hasta ahora esa regla estaba declarada
+  "obligatoria" pero ningún paso de revisión la comprobaba, y en la práctica se seguía viendo código con
+  varios `return` dispersos.
+- **`docs/GUARDRAILS.md`.** Distingue instrucciones *advisory* (`MASTER_PROMPT.md`) de guardarraíles
+  deterministas a nivel de git/CI (pre-commit, branch protection) que se mantienen aunque el modelo olvide
+  una regla. Incluye un ejemplo concreto de heurística pre-commit para la regla de un solo `return`.
+- **`docs/PARALLEL_WORK.md`.** Formaliza el Modo Orquestador ya existente con mecánica concreta de
+  `git worktree` para 2-3 sesiones de IA independientes en paralelo.
+- **`docs/SOURCE_OF_TRUTH.md`.** Patrón de convivencia cuando el proyecto ya usa Jira/ServiceNow/etc.
+  antes de adoptar dbv-specs-ops.
+- **`docs/METRICS.md`.** Indicadores leading/lagging opcionales por fase, legibles solo desde git.
+- **`evals/` + `scripts/run-evals.sh`.** Suite de regresión opcional para la propia configuración del
+  agente (`MASTER_PROMPT.md`, ficheros de activación) — no valida el código del proyecto, valida que el
+  proceso se sigue produciendo igual tras un cambio de configuración.
+- **`.claude/commands/{spec,plan,build,test,code-simplify,ship,maintain}.md`.** Comandos nativos de
+  Claude Code (con autocompletado) para cada fase del ciclo.
+
+### Fixed
+- **Comandos de fase escuetos mal interpretados.** Escribir solo `/build` (sin texto adicional) podía
+  responderse como si el código no existiera, obligando a reformular como frase completa. Corregido con una
+  regla explícita en `docs/MASTER_PROMPT.md` (`<workflow>`): un comando de fase escueto siempre significa
+  "ejecuta ya esa fase", cascadeando automáticamente por las fases previas que falten en vez de rechazar la
+  petición; reforzado en Claude Code con comandos nativos reales (`.claude/commands/`).
+
+### Changed
+- **`docs/MASTER_PROMPT.md`** — enganches a los 6 documentos nuevos en `<workflow>` (`/plan` Modo
+  Orquestador → `PARALLEL_WORK.md`; `/code-simplify` → `REVIEW.md`; `/ship` → gate de hallazgos Crítico;
+  Fase 7 documentada al final), `<boundaries>` (→ `GUARDRAILS.md`) y `<context_management>` (→
+  `SOURCE_OF_TRUTH.md`).
+- **`README.md` dividido en dos ficheros independientes de un solo idioma** — `README.md` (español,
+  principal) y `README.en.md` (inglés), en vez de un único fichero bilingüe con secciones EN/ES mezcladas.
+  Cada uno incluye: badge de versión, Key Features, Origin & Inspiration (nueva entrada citando el playbook
+  de Anthropic), diagrama `mermaid` de flujo actualizado con el nodo opcional de Maintain (Fase 7) y el
+  pase de revisión por capas en Simplify, tabla de fases con recuadro de Fase 7 opcional, tabla de ficheros
+  de `docs/`, mención de `evals/`/`scripts/`, nota de `.claude/commands/` para usuarios de Claude Code, y un
+  enlace cruzado de cambio de idioma en la cabecera de cada fichero.
+- **`docs/README.md`** — tabla e índice de flujo con los 6 documentos nuevos.
+- **`docs/UPGRADE_PROMPT.md`** — manifest v2.8.0, nuevas URLs de descarga y mensaje de cierre actualizado.
+
+---
+
+## [2.7.0] — 2026-08-28
+
+Consolidación de lecciones, patrones y trampas técnicas contrastadas en múltiples aplicaciones nativas publicadas en tiendas oficiales de distribución (Microsoft Store, Apple App Store, Uptodown, etc.). Todo lo que sigue surge de horas de depuración en entornos reales de producción y pruebas multiplataforma.
+
+### Added
+- **`docs/NATIVE_DESKTOP_APPS.md` §7 — Definición de Hecho (DoD) de Experiencia de Escritorio.** Una app
+  compilada con Tauri todavía no es una app de escritorio: es una web dentro de un marco. La diferencia son
+  siempre los mismos seis detalles (diálogos de archivo nativos, iconografía completa generada desde un
+  único `app-icon.svg`, atajos universales que funcionen **también con el foco dentro de un input**, menú
+  nativo en macOS, scrollbars tematizadas y layout fluido, tooltips que anuncian los atajos), y se elevan a
+  criterios de aceptación en vez de pulido opcional. Incluye dos reglas de verificación: lanzar el
+  ejecutable real (no dar por buena una compilación) y mantener la versión sincronizada en `package.json`,
+  `tauri.conf.json`, `Cargo.toml` y el "Acerca de" de la UI. **Esta sección se dio por escrita en un ADR de
+  proyecto en agosto y nunca llegó al framework** — el mismo fallo de backport que ya se corrigió con el
+  menú de macOS.
+- **`docs/WEB_TO_DESKTOP_MIGRATION.md` §9 — la ruta con bundler (React/Vue/Svelte + Vite).** El patrón sin
+  bundler de `NATIVE_DESKTOP_APPS.md` §3 no aplica ahí, y aparecen tres problemas propios: listeners de
+  eventos nativos suscritos en un `useEffect` con dependencias vacías que capturan handlers obsoletos (el
+  menú nativo acaba guardando contenido antiguo), el linter recorriendo el JS generado por Cargo dentro de
+  `src-tauri/target/`, y código muerto de detección de entorno duplicando la capa de adaptación de §3.1.
+- **`docs/NATIVE_APPS_RELEASE_CI.md` §6bis — los inputs de una Action de terceros cambian entre versiones y
+  un input inválido no rompe el build.** GitHub Actions solo avisa, así que una opción mal nombrada queda
+  sin efecto en silencio. La fuente fiable es el aviso `Unexpected input(s)` del primer run real, que
+  enumera los inputs válidos de la versión que de verdad se ejecutó — no la documentación.
+
+### Changed
+- **`docs/NATIVE_DESKTOP_APPS.md` §6 — cuatro trampas nuevas** (de 10 a 14): `zoomHotkeysEnabled` viene
+  desactivado por defecto en Tauri v2 (`Ctrl`+rueda no hace nada aunque funcione en el navegador); un build
+  que dice `Finished` sin haber dicho `Compiling` conserva los assets del frontend anteriores, porque
+  `generate_context!` los embebe en tiempo de compilación; `document.title` **no** sirve como sonda para
+  saber si el JS se ejecuta (el título de la ventana nativa lo fija `tauri.conf.json`), y la sonda que sí
+  funciona es un `window.addEventListener('error', ...)` inline en el `<head>`; y cambiar solo un recurso
+  incrustado (un `.ico`) no invalida la caché de Cargo, hace falta `cargo clean -p <crate> --release`.
+- **`docs/NATIVE_DESKTOP_APPS.md` §4 punto 4 — quién genera la clave de firma del updater.** El comando
+  `tauri signer generate` lo ejecuta el usuario en su propia terminal, nunca la IA, para que la password no
+  pase por el contexto ni por los logs del agente; y esa password va a un gestor de contraseñas, nunca a un
+  fichero junto a la clave.
+- **`docs/MARKETPLACE_PUBLISHING.md` §3 — la carpeta de empaquetado generada se trackea entera.** El
+  instinto de gitignorar `src-tauri/gen/windows/` y conservar solo la configuración es justo el error: sus
+  assets pueden necesitar corrección manual (el placeholder negro que provocó un rechazo real de Microsoft),
+  y gitignorados esa corrección se pierde en silencio y el asset roto vuelve.
+- **`docs/NATIVE_APPS_RELEASE_CI.md` §6 — la variante local del fallo de firma.** Encadenar
+  `tauri build && <paso siguiente>` hace que el paso siguiente nunca se ejecute en un build sin variables de
+  firma, sin ningún error que lo explique porque el instalador sí se generó. Un orquestador `spawnSync` que
+  ejecute siempre ambos pasos y combine los códigos de salida es más fiable que `&&`.
+- **`docs/WEB_TO_DESKTOP_MIGRATION.md` §8 — checklist de migración** ampliada con la DoD de escritorio, la
+  verificación sobre el ejecutable real y la sincronización de versión en los cuatro ficheros.
+
+---
+
 ## [2.6.0] — 2026-08-22
 
 ### Added
@@ -26,6 +129,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   no se sabe buscar. Añadida además la técnica de depuración: registrar `window.onerror` /
   `unhandledrejection` en un `<script>` inline sin `defer` en el `<head>`, antes de cualquier script
   externo — un capturador definido dentro del fichero que falla nunca llega a registrarse.
+- **`docs/WEB_TO_DESKTOP_MIGRATION.md` — dos gotchas reales contrastados en migraciones completas a producción:**
+  - **§1 (Arquetipo A), aviso sobre `frontendDist`:** "apunta a la carpeta y ya" deja de ser cierto si
+    `src-tauri/` vive dentro de esa misma carpeta (migración in-place, típico cuando la raíz del repo ya la
+    publica GitHub Pages). Tauri embebe entonces recursivamente `src-tauri/target/...`: build roto por lock
+    de Cargo, o peor, ventana en negro con `ERR_CONNECTION_REFUSED` sin relación aparente con la causa.
+    Documentado el patrón `scripts/sync-frontend.mjs` (copia el frontend a `src-tauri/frontend/` gitignored,
+    enganchado a `beforeDevCommand`/`beforeBuildCommand`) como solución.
+  - **§3.1, ejemplo de capa de adaptación renombrado de `isTauri` a `runningInTauri`:** con
+    `withGlobalTauri: true` (obligatorio para el patrón sin bundler de `NATIVE_DESKTOP_APPS.md` §3), Tauri
+    v2 ya declara un global `isTauri` propio; declarar `const isTauri = ...` en un script clásico choca con
+    él y mata el fichero entero con el mismo `SyntaxError` de parseo silencioso que ya advierte §3 — solo
+    que aquí el segundo declarante es el propio runtime de Tauri, no un fichero propio.
 - **Integración de Phase Gates en el Master Prompt**:
   - `docs/MASTER_PROMPT.md`: Bootstrap §7 obliga a resolver las 4 decisiones previas de `WEB_TO_DESKTOP_MIGRATION.md` antes de proponer stack cuando ya existe código web funcionando.
   - `docs/MASTER_PROMPT.md`: Nuevo **Gate de migración web → escritorio** en `/plan` (Paso 3), que exige registrar por escrito arquetipo, repositorio de destino, modo dual vs sustitución y decisión Rust/sidecar por función — más estrategia de provisionamiento y auditoría de licencias si hay sidecar, **antes** de escribir código.
@@ -315,7 +430,9 @@ Initial public release of the **dbv-specs-ops** SDD framework.
 
 ---
 
-[Sin publicar]: https://github.com/davidbuenov/dbv-specs-ops/compare/v2.6.0...HEAD
+[Sin publicar]: https://github.com/davidbuenov/dbv-specs-ops/compare/v2.8.0...HEAD
+[2.8.0]: https://github.com/davidbuenov/dbv-specs-ops/compare/v2.7.0...v2.8.0
+[2.7.0]: https://github.com/davidbuenov/dbv-specs-ops/compare/v2.6.0...v2.7.0
 [2.6.0]: https://github.com/davidbuenov/dbv-specs-ops/compare/v2.5.1...v2.6.0
 [2.5.1]: https://github.com/davidbuenov/dbv-specs-ops/compare/v2.5.0...v2.5.1
 [2.5.0]: https://github.com/davidbuenov/dbv-specs-ops/compare/v2.4.0...v2.5.0
