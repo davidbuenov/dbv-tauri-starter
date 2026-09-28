@@ -11,6 +11,16 @@ el prefijo `template-v` en los tags de git (`template-vX.Y.Z`) — deliberadamen
 
 ## [Sin publicar] / [Unreleased]
 
+### Fixed
+- **`release-linux.yml` — el `.AppImage` no arrancaba si lo ejecutaba otro usuario.** linuxdeploy
+  (dentro de `tauri build`) deja `AppRun.wrapped` con permisos `0770` en un squashfs cuyo dueño es
+  root. En un escritorio no se nota, pero firejail y el test automático del catálogo AppImageHub
+  fallan con `Permission denied`. Paso nuevo tras `tauri-action`: extrae el AppImage, normaliza
+  permisos (`u+rwX,go+rX,go-w`), lo reempaqueta con `appimagetool`, verifica sobre el AppImage ya
+  reempaquetado y sustituye el asset con `gh release upload --clobber` (con el nombre pasado a
+  puntos, como lo guarda GitHub). Detectado el 2026-09-28 en dos apps derivadas (dbv-typst-editor y
+  dbv-md-reader). Ver `dbv-specs-ops/docs/NATIVE_APPS_RELEASE_CI.md` §6ter tras el próximo sync.
+
 ### Added
 - **`MIGRATION_PROMPT.md` — prompt ejecutable para migrar una app web existente a escritorio.** Nueve
   fases con puertas de parada (🛑 STOP), pensado para que la IA lo ejecute **desde el repositorio de la

@@ -48,6 +48,8 @@
   - [x] Tag `template-v0.1.0` movido a este commit final y publicado con `git push --tags`.
 
 ---
+- [x] **Fix de CI (2026-09-28): permisos del `.AppImage`.** Añadido a `release-linux.yml` el paso que normaliza permisos, reempaqueta y resube el AppImage; entrada en `CHANGELOG.md` → `[Sin publicar]`. Origen: el test de AppImageHub falló en dos apps derivadas (`AppRun.wrapped: Permission denied`). La documentación (§6ter de `NATIVE_APPS_RELEASE_CI.md`) llega con el próximo `subtree pull` del framework.
+  - [ ] Publicar un `template-vX.Y.Z` que lo incluya.
 
 ## 🔄 Context Snapshot / Snapshot de Contexto
 
