@@ -11,6 +11,16 @@ el prefijo `template-v` en los tags de git (`template-vX.Y.Z`) — deliberadamen
 
 ## [Sin publicar] / [Unreleased]
 
+### Added
+- **`release-linux.yml` — actualizaciones incrementales del `.AppImage` (`.zsync`).** El paso de
+  reempaquetado incrusta la información de actualización (`gh-releases-zsync|<dueño>|<repo>|latest|
+  <Nombre>_*_amd64.AppImage.zsync`, con el dueño y el repo que da GitHub) y sube el `.zsync` junto al
+  AppImage, para que AppImageUpdate descargue solo lo que cambia. Instala `zsync` (sin `zsyncmake`,
+  appimagetool se salta el `.zsync` sin fallar), reempaqueta ya con el nombre con puntos de GitHub (la
+  URL del `.zsync` es ese nombre) y falla si falta el `.zsync`, si su `URL:` no es el asset o si la
+  cadena incrustada (leída de `.upd_info` con `objcopy`) no es la esperada. Origen: DBV Typst Editor
+  0.12.0. Ver `dbv-specs-ops/docs/NATIVE_APPS_RELEASE_CI.md` §6quater tras el próximo sync.
+
 ### Fixed
 - **`release-linux.yml` — el `.AppImage` no arrancaba si lo ejecutaba otro usuario.** linuxdeploy
   (dentro de `tauri build`) deja `AppRun.wrapped` con permisos `0770` en un squashfs cuyo dueño es
