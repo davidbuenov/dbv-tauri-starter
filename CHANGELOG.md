@@ -12,6 +12,12 @@ el prefijo `template-v` en los tags de git (`template-vX.Y.Z`) — deliberadamen
 ## [Sin publicar] / [Unreleased]
 
 ### Added
+- **Lección para el Cask de Homebrew de las apps derivadas (Homebrew 7).** El starter no incluye tap
+  ni Cask, pero las apps que lo añadan no deben usar los bloques Ruby `preflight`/`postflight`
+  (obsoletos: cada usuario ve el aviso al instalar). Para un comando de consola, `command_wrapper`; en
+  Linux, el AppImage está en `~/Applications`, no en `staged_path`. El CI del tap debe fallar ante un
+  aviso «deprecated». Origen: DBV Typst Editor 0.12.0. Ver `dbv-specs-ops/docs/NATIVE_APPS_RELEASE_CI.md`
+  §6quinquies tras el próximo sync.
 - **`release-linux.yml` — actualizaciones incrementales del `.AppImage` (`.zsync`).** El paso de
   reempaquetado incrusta la información de actualización (`gh-releases-zsync|<dueño>|<repo>|latest|
   <Nombre>_*_amd64.AppImage.zsync`, con el dueño y el repo que da GitHub) y sube el `.zsync` junto al
