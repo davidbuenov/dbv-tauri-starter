@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="es">
   <head>
     <meta charset="UTF-8" />
@@ -95,6 +95,19 @@
         <div class="modal-actions">
           <button id="about-close" data-i18n="about.close">Cerrar</button>
         </div>
+      </div>
+    </div>
+    <!-- Panel Lateral de IA -->
+    <aside id="ai-panel-container" class="ai-sidebar hidden"></aside>
+
+    <!-- Modal «Conectar una IA» -->
+    <div id="ai-connect-modal" class="modal-overlay hidden">
+      <div class="modal-card modal-card--wide">
+        <div class="modal-header">
+          <h3 data-i18n="ai.connectTitle">Conectar una IA</h3>
+          <button id="ai-connect-close" class="btn-icon" title="Cerrar">&times;</button>
+        </div>
+        <div id="ai-connect-body"></div>
       </div>
     </div>
   </body>

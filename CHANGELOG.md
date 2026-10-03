@@ -11,6 +11,21 @@ el prefijo `template-v` en los tags de git (`template-vX.Y.Z`) — deliberadamen
 
 ## [Sin publicar] / [Unreleased]
 
+---
+
+## [template-v0.2.0] — 2026-10-03
+
+Subsistema canónico completo de IA generativa de escritorio (híbrido local / nube con custodia en llavero nativo del SO / agentes de suscripción vía ACP), frontend vanilla JS modular y zero-footprint, documentación bilingüe para el usuario final y suite de 40 tests unitarios y de integración validados. Incluye además las mejoras de CI para empaquetado AppImage y Cask de Homebrew, y la sincronización con el framework dbv-specs-ops v2.9.0.
+
+### Added
+- **Subsistema de IA Generativa de Escritorio (Arquitectura 3 niveles):**
+  - **Nivel 1 — Modelos locales**: Conexión con Ollama y LM Studio sobre `localhost`, sin API key y con coste cero de tokens. Autodetección proactiva de servicios corriendo y modelos instalados.
+  - **Nivel 2 — Modelos en la nube con API key**: Soporte para Anthropic Claude, OpenAI, DeepSeek, Google Gemini y OpenRouter. Claves custodiadas exclusivamente en el llavero seguro nativo del sistema operativo (Windows Credential Manager, macOS Keychain, Linux Secret Service/Freedesktop) a través de Rust (`keyring = "4"`), impidiendo almacenamiento inseguro en frontend o en texto plano.
+  - **Nivel 3 — Agentes de suscripción vía ACP (Agent Client Protocol)**: Integración con herramientas CLI ya autenticadas en la máquina del usuario (Claude Code, ChatGPT CLI, Gemini CLI) mediante transporte JSON-RPC por `stdin`/`stdout`, permitiendo utilizar su suscripción de pago existente sin coste adicional por tokens.
+  - **Frontend Vanilla JS modular y zero-footprint**: Carga perezosa del módulo `src/ai/entry.js` solo cuando el usuario abre el panel de IA, minimizando el consumo en reposo. Modal asistente guiado de conexiones (`connectWizard.js`), i18n reactivo con fallback dinámico (`i18nBridge.js`), gestor de chat conversacional con contexto de documento y visor interactivo de propuestas con diffs lado a lado (`diff.js`, `reviewView.js`).
+  - **Documentación de usuario bilingüe**: `docs/IA.md` (Español) y `docs/IA.en.md` (Inglés) explicando la configuración, privacidad y diferencias entre suscripciones y API keys.
+  - **Suite de pruebas completa**: 40 tests unitarios y de integración en Rust ejecutados y validados (incluyendo transporte ACP con agente simulado y tests de streaming SSE).
+
 ### Added
 - **Lección para el Cask de Homebrew de las apps derivadas (Homebrew 7).** El starter no incluye tap
   ni Cask, pero las apps que lo añadan no deben usar los bloques Ruby `preflight`/`postflight`

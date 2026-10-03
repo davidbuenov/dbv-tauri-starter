@@ -1,4 +1,4 @@
-// IIFE obligatoria (dbv-specs-ops/docs/NATIVE_DESKTOP_APPS.md §3): los scripts clásicos comparten
+﻿// IIFE obligatoria (dbv-specs-ops/docs/NATIVE_DESKTOP_APPS.md §3): los scripts clásicos comparten
 // el ámbito global — sin este cierre, `const t` colisionaría con cualquier declaración de i18n.js
 // y el SyntaxError resultante mataría este fichero entero en silencio, sin listeners ni error visible.
 (function () {

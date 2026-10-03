@@ -1,60 +1,48 @@
-# Backlog - dbv-tauri-starter
+# Backlog - dbv-tauri-starter template-v0.2.0 (Desktop Generative AI Subsystem)
 
 ## Contexto del Proyecto (Context Snapshot)
-* **Objetivo**: Plantilla Tauri v2 + dbv-specs-ops lista para clonar, con CI de release por plataforma y una demo mínima funcional que enseña el patrón correcto de cierre de ventana con confirmación.
-* **Estado actual**: `/plan` aprobado (RF-01 a RF-04), `implementation_plan.md` escrito, pendiente `/build`.
-* **Última decisión técnica**: Adversarial Architect Review resolvió 2 riesgos por diseño (orden de implementación del permiso `core:window:allow-destroy` antes que la lógica del modal; flag `closeConfirmPending` contra doble disparo de `onCloseRequested`) — ver `implementation_plan.md`.
-* **Próximo paso**: Ejecutar los 6 pasos de `implementation_plan.md` en orden, luego `/test` manual en `tauri dev`.
+* **Objetivo**: Proveer la plantilla de inicio oficial de Tauri v2 + dbv-specs-ops con el subsistema canónico completo de IA generativa de escritorio (3 niveles: local, nube con llavero seguro y agentes de suscripción vía ACP), zero-footprint y bilingüe.
+* **Estado actual**: ENTREGA COMPLETADA (template-v0.2.0). 40 tests en verde, UI funcional con carga perezosa y documentación bilingüe.
+* **Última decisión técnica**: Desacoplamiento total del frontend mediante carga perezosa (`entry.js`), custodia de API keys en llavero del SO vía `keyring` de Rust y soporte ACP para suscripciones existentes sin costes de tokens.
+* **Próximo paso**: Sellar versión en Git con tag `template-v0.2.0`.
 
 ## Checklist de Tareas
 
-- [x] **Fase 1: Bootstrap y `/spec`**
-  - [x] `project.config.md` relleno, `LICENSE`, limpieza de `README.template.md`.
-  - [x] `docs/SPECIFICATIONS.md` — starter como producto (RF-01 a RF-04, fuera de alcance, riesgos).
-  - [x] `docs/ARCHITECTURE.md` — stack real, estructura de directorios, decisión de `capabilities` mínimas por YAGNI.
-  - [x] Resuelta la pregunta abierta de versionado: `vX.Y.Z` reservado para apps derivadas (comparten trigger con `release-*.yml`), `template-vX.Y.Z` + `CHANGELOG.md` propio para el starter en sí. Tag `template-v0.1.0` creado.
+- [x] **Fase 1: Especificaciones (`/spec`)**
+  - [x] Formalizados los requisitos funcionales de IA: RF-IA-01 a RF-IA-04 en `docs/SPECIFICATIONS.md`.
+  - [x] Formalizados los requisitos no funcionales: RNF-IA.1 a RNF-IA.4 (keyring, zero-footprint, offline, privacidad).
+  - [x] Marcados los requisitos RF-01 a RF-08 de la v0.1.0 como completados.
 
-- [x] **Fase 2: `/plan`**
-  - [x] Adversarial Architect Review (impreso en la sesión, resumido arriba).
-  - [x] `implementation_plan.md` con frontmatter (`dependencies`/`risks`/`rollback_strategy`).
+- [x] **Fase 2: Planificación Técnica (`/plan`)**
+  - [x] Redactado `implementation_plan.md` con dependencias de Rust, análisis de riesgos y estrategia de rollback.
+  - [x] Actualizado `docs/ARCHITECTURE.md` con el diagrama de flujo y la arquitectura modular del subsistema de IA.
 
-- [x] **Fase 3: `/build`** (RF-05 de i18n añadido a mitad de plan, ver `implementation_plan.md`)
-  - [x] 1. `capabilities/default.json` — añadido `core:window:allow-destroy`.
-  - [x] 2. `src-tauri/src/lib.rs` — comando `get_greeting_name` (Guard Clause, devuelve datos no frase — la presentación con i18n vive en JS).
-  - [x] 3. `src/i18n.js` (nuevo) — objetos `es`/`en`, `t()`, `applyTranslations()`, detección de idioma.
-  - [x] 4. `src/main.js` — estado `isDirty`, `onCloseRequested` (patrón validado contra `dbv-md-reader/src/app.js` ADR-030: solo `preventDefault()` al cancelar, nunca `.destroy()` manual), `closeConfirmPending`, wiring de idioma.
-  - [x] 5. `src/index.html` — quitado `type="module"`, markup de demo + aviso + modal + selector ES/EN.
-  - [x] 6. `src/styles.css` — estilos del modal/banner/selector (claro/oscuro).
-  - [x] 7. `README.md` — sección "Qué hacer ahora".
+- [x] **Fase 3: Construcción (`/build`)**
+  - [x] Backend Rust: 8 submódulos en `src-tauri/src/ai/` (`secrets`, `detect`, `connections`, `providers`, `acp`, `store`, `check`, `commands`).
+  - [x] Registro en `src-tauri/src/lib.rs` y dependencias en `Cargo.toml`.
+  - [x] Frontend: Carga perezosa en `src/ai/entry.js`, chat, wizard de conexiones, visor de diffs e i18n reactivo.
+  - [x] Integración en `src/index.html` y `src/styles.css`.
 
-- [x] **Fase 4: `/test`** — completada tras una sesión de depuración real (ver Lecciones en `memory.md`)
-  - [x] `cargo check` + `node --check` en verde.
-  - [x] **Bug crítico encontrado y corregido:** colisión de identificador `t` entre `i18n.js` y `main.js` por falta de IIFE (scripts clásicos comparten ámbito global) — mataba `main.js` entero con un SyntaxError de parseo silencioso; toda la interfaz quedaba muerta. Ambos ficheros envueltos en IIFE. Detalle completo y método de diagnóstico en `memory.md`.
-  - [x] Bug de CSS corregido: modal visible en el arranque por empate de especificidad `.hidden` vs `.modal-overlay`.
-  - [x] Verificado en vivo (UI Automation + capturas + confirmación del usuario): saludo desde Rust al escribir, cambio de idioma ES/EN aplicado a toda la UI, Always on Top con bit `WS_EX_TOPMOST` real confirmado por Win32, panel Acerca de con versión leída de `getVersion()`. RF-06/07/08 (barra superior, chincheta, Acerca de) añadidos y verificados en la misma sesión a petición del usuario ("Hola Mundo empowered").
-  - [x] Confirmación final del usuario en la app real: "ya funciona todo bien".
+- [x] **Fase 4: Pruebas y Verificación (`/test`)**
+  - [x] `cargo test` ejecutado: **40 tests unitarios y de integración pasando al 100%**.
+  - [x] Validación de streaming SSE, transporte ACP y operaciones con el llavero del SO.
 
-- [x] **Fase 5: `/code-simplify`**
-  - [x] `currentWindow`/`aboutVersionEl` cacheados en vez de repetir `getCurrentWindow()`/`getElementById` — consistencia y una llamada menos por interacción.
-  - [x] Revisión de seguridad: sin secretos, sin dependencias nuevas, `name` del comando Rust se muestra vía `textContent` (nunca `innerHTML`) — sin riesgo de XSS.
-  - [x] Verificado en vivo tras el refactor (chincheta + Acerca de por UI Automation) — sin regresión.
+- [x] **Fase 5: Simplificar (`/code-simplify`)**
+  - [x] Generalización del identificador de servicio en `secrets.rs` (`"dbv-tauri-starter"`).
+  - [x] Desacoplamiento de i18n mediante `i18nBridge.js` con fallback automático a español.
 
-- [x] **RF-09 (añadido a petición del usuario tras el `/ship` inicial): `TAURI_TUTORIAL.md`** — guía de cómo añadir UI/comandos Rust/cómo se conectan, con enlaces oficiales verificados con WebFetch antes de publicarlos.
-
-- [x] **Fase 6: `/ship`**
-  - [x] `CHANGELOG.md` de la raíz ampliado con RF-01..09 y los 2 bugs corregidos, dentro de la sección `template-v0.1.0` (nunca publicada hasta ahora, no reescribe historia pública).
-  - [x] `walkthrough.md` completado (fichero local, gitignored por el framework).
-  - [x] Memory Gate ya hecho en la ronda anterior (lección del bug crítico + método de diagnóstico).
-  - [x] Tag `template-v0.1.0` movido a este commit final y publicado con `git push --tags`.
+- [x] **Fase 6: Entrega (`/ship`)**
+  - [x] Documentación de usuario final creada en `docs/IA.md` (ES) y `docs/IA.en.md` (EN).
+  - [x] `README.md` actualizado con la guía del subsistema de IA.
+  - [x] Sincronización de versión a `0.2.0` en `package.json`, `src-tauri/Cargo.toml` y `src-tauri/tauri.conf.json`.
+  - [x] `CHANGELOG.md` promovido a `## [template-v0.2.0] — 2026-10-03`.
+  - [x] Sincronización de los ficheros del framework `dbv-specs-ops` a v2.9.0.
 
 ---
-- [x] **CI (2026-09-28): `.zsync` e información de actualización del `.AppImage`.** El paso de reempaquetado de `release-linux.yml` añade `-u` y sube el `.zsync`, con sus tres verificaciones; entrada en `CHANGELOG.md` → `[Sin publicar]`. Origen: DBV Typst Editor 0.12.0 (RF-84), probado en WSL. La documentación (§6quater) llega con el próximo `subtree pull` del framework.
-- [x] **Fix de CI (2026-09-28): permisos del `.AppImage`.** Añadido a `release-linux.yml` el paso que normaliza permisos, reempaqueta y resube el AppImage; entrada en `CHANGELOG.md` → `[Sin publicar]`. Origen: el test de AppImageHub falló en dos apps derivadas (`AppRun.wrapped: Permission denied`). La documentación (§6ter de `NATIVE_APPS_RELEASE_CI.md`) llega con el próximo `subtree pull` del framework.
-  - [ ] Publicar un `template-vX.Y.Z` que lo incluya.
 
 ## 🔄 Context Snapshot / Snapshot de Contexto
 
-> **Last update / Última actualización:** 2026-08-28
-> **Exact point / Punto exacto:** **3 apps ya en tienda** construidas o migradas con este starter: `dbv-md-reader` (v0.13.1), `dbv-teleprompter` (v0.2.0, MSIX + Partner Center) y `eer-studio` (v1.4.0). Framework subido a **v2.7.0** con la cosecha de lecciones de las tres (ver ADR 2026-08-28) — commit local en `dbv-specs-ops` y sincronizado a este repo; **sin push a `origin` en ninguno de los dos**, pendiente de revisión del usuario.
-> **Pending / Pendiente:** (1) Push de `dbv-specs-ops` — 3 commits locales por delante de `origin`. (2) `dbv-img2webp` tiene el framework vendorizado en **v2.3.0** pese a un commit del 22-ago que dice haberlo subido a v2.6.0: sync de subtree fallido en silencio, hay que reejecutar `UPGRADE_PROMPT.md` ahí. (3) `unreal-smart-cleaner` (item 2 del roadmap) sigue sin empezar, congelado desde 2024.
-> **Next step / Próximo paso:** La migración de **`dbv-pdf2deck`** continúa **en su propio repo**. El punto de partida está escrito en `dbv-pdf2deck/MIGRACION_ESCRITORIO.md` (sin commitear, rama `main`): Fase 0 y Fase 1.1 hechas y verificadas contra el código, con el prompt de arranque que enlaza de vuelta a `MIGRATION_PROMPT.md` de este repo. Bloqueante activo: PyMuPDF (AGPL-3.0) está en **3 módulos** del backend y el uso más denso es como **escritor** de PDF (`exporter_engine.py`), que `pypdfium2` no cubre — hay que decidir entre sustituir (lector `pypdfium2` + escritor `reportlab`), comprar licencia de Artifex o relicenciar a AGPL. Además el README declara MIT y **no existe fichero `LICENSE`**.
+> **Last update / Última actualización:** 2026-10-03
+> **Exact point / Punto exacto:** Ciclo completo de la versión template-v0.2.0 cerrado en `dbv-tauri-starter`.
+> **Pending / Pendiente:** Ninguno para esta versión.
+> **Next step / Próximo paso:** Crear commit y tag `template-v0.2.0` en git.

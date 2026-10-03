@@ -1,8 +1,8 @@
 # 📋 Especificaciones: dbv-tauri-starter
 
 > **Fase:** `/spec` (Especificación)
-> **Estado:** Validado
-> **Última Revisión:** 2026-08-21
+> **Estado:** Validado e Implementado
+> **Última Revisión:** 2026-10-03 (template-v0.2.0)
 
 ---
 
@@ -30,15 +30,28 @@
 - [x] **CI de Release para 3 plataformas:** `release-windows.yml`, `release-linux.yml`, `release-macos.yml` — build sin firmar en cada plataforma, adjuntado como borrador de GitHub Release en cada tag `vX.Y.Z`, siguiendo el patrón validado en `dbv-specs-ops/docs/NATIVE_APPS_RELEASE_CI.md` §9.
 - [x] **README de arranque:** instrucciones de "clona → actualiza framework → `/spec`" y de cómo migrar una app existente, más explicación de cómo se mantiene la plantilla al día.
 - [x] **Identidad de proyecto rellenada:** `project.config.md`, `LICENSE`, y limpieza de `README.template.md` ya consumido.
-- [ ] **RF-01 — Demo mínima funcional, no un "Hola Mundo" vacío:** sustituir el saludo por defecto de `create-tauri-app` por un ejemplo pequeño pero real: un comando Rust propio (`#[tauri::command]`) + un input de texto que marca "cambios sin guardar" en memoria. Criterio de aceptación: al cerrar la ventana con cambios sin guardar, aparece un modal propio de confirmación (nunca `window.confirm()`/`window.alert()` nativos — ver `dbv-specs-ops/docs/NATIVE_DESKTOP_APPS.md` §6, ítems 1-2) con permiso `core:window:allow-destroy` correctamente concedido en `capabilities/default.json`. Sin cambios sin guardar, la ventana cierra sin preguntar.
-- [ ] **RF-02 — Aviso visible de "esto es una demo":** el propio `index.html` debe indicar claramente, sin necesidad de leer el repo, que este contenido es de ejemplo y remitir a `README.md` para los próximos pasos.
-- [ ] **RF-04 — Corregir `index.html` para no usar `<script type="module">`:** el scaffold de `create-tauri-app` lo trae por defecto, pero contradice el patrón "sin bundler" que este mismo framework documenta en `dbv-specs-ops/docs/NATIVE_DESKTOP_APPS.md` §3 (fallos silenciosos en algunos WebViews embebidos bajo protocolo custom). Un starter que documenta la lección debe también seguirla.
-- [ ] **RF-03 — Guía de "qué hacer ahora" en `README.md`:** sección nueva explicando en pasos concretos cómo sustituir la demo por la app real (qué borrar de `src/`/`src-tauri/src/`, cuándo ampliar `capabilities/`, y el flujo `/spec` ya documentado) — el objetivo de §2 en `SPECIFICATIONS.md` ("crear proyecto nuevo") no está completo si el usuario tiene que adivinar por dónde empezar a editar.
-- [ ] **RF-06 — Barra superior con botones de icono:** reestructurar la cabecera actual (título + selector de idioma) en una barra de herramientas con botones tipo `.btn-icon`, mismo patrón visual que `dbv-md-reader` — punto de anclaje para RF-07/RF-08 y para lo que cada proyecto derivado añada después.
-- [ ] **RF-07 — Botón Always on Top:** `getCurrentWindow().isAlwaysOnTop()`/`.setAlwaysOnTop()`, sin comando Rust nuevo. Requiere el permiso `core:window:allow-set-always-on-top` (verificado contra el ACL real: no incluido en `core:default`, que solo trae la lectura `allow-is-always-on-top` — mismo gotcha que ADR-024 de `dbv-md-reader`). Estado visual (`.active`) y `data-i18n-title` dinámico.
-- [ ] **RF-08 — Panel "Acerca de" con hueco para actualizaciones:** modal (`#about-modal`, reutiliza `.modal-overlay`/`.modal-card`) con nombre de la app, versión leída vía `window.__TAURI__.app.getVersion()` (permiso `core:app:allow-version`, tampoco en `core:default`) y crédito a dbv-specs-ops. Incluye un botón "Buscar actualizaciones" deshabilitado con explicación de por qué (RF-05 de `NATIVE_DESKTOP_APPS.md` §4: no se incluye `tauri-plugin-updater` de fábrica, ver Fuera de Alcance) — enseña dónde iría, sin implementarlo.
+- [x] **RF-01 — Demo mínima funcional, no un "Hola Mundo" vacío:** sustituir el saludo por defecto de `create-tauri-app` por un ejemplo pequeño pero real: un comando Rust propio (`#[tauri::command]`) + un input de texto que marca "cambios sin guardar" en memoria. Criterio de aceptación: al cerrar la ventana con cambios sin guardar, aparece un modal propio de confirmación (nunca `window.confirm()`/`window.alert()` nativos — ver `dbv-specs-ops/docs/NATIVE_DESKTOP_APPS.md` §6, ítems 1-2) con permiso `core:window:allow-destroy` correctamente concedido en `capabilities/default.json`. Sin cambios sin guardar, la ventana cierra sin preguntar.
+- [x] **RF-02 — Aviso visible de "esto es una demo":** el propio `index.html` debe indicar claramente, sin necesidad de leer el repo, que este contenido es de ejemplo y remitir a `README.md` para los próximos pasos.
+- [x] **RF-04 — Corregir `index.html` para no usar `<script type="module">`:** el scaffold de `create-tauri-app` lo trae por defecto, pero contradice el patrón "sin bundler" que este mismo framework documenta en `dbv-specs-ops/docs/NATIVE_DESKTOP_APPS.md` §3 (fallos silenciosos en algunos WebViews embebidos bajo protocolo custom). Un starter que documenta la lección debe también seguirla.
+- [x] **RF-03 — Guía de "qué hacer ahora" en `README.md`:** sección nueva explicando en pasos concretos cómo sustituir la demo por la app real (qué borrar de `src/`/`src-tauri/src/`, cuándo ampliar `capabilities/`, y el flujo `/spec` ya documentado) — el objetivo de §2 en `SPECIFICATIONS.md` ("crear proyecto nuevo") no está completo si el usuario tiene que adivinar por dónde empezar a editar.
+- [x] **RF-06 — Barra superior con botones de icono:** reestructurar la cabecera actual (título + selector de idioma) en una barra de herramientas con botones tipo `.btn-icon`, mismo patrón visual que `dbv-md-reader` — punto de anclaje para RF-07/RF-08 y para lo que cada proyecto derivado añada después.
+- [x] **RF-07 — Botón Always on Top:** `getCurrentWindow().isAlwaysOnTop()`/`.setAlwaysOnTop()`, sin comando Rust nuevo. Requiere el permiso `core:window:allow-set-always-on-top` (verificado contra el ACL real: no incluido en `core:default`, que solo trae la lectura `allow-is-always-on-top` — mismo gotcha que ADR-024 de `dbv-md-reader`). Estado visual (`.active`) y `data-i18n-title` dinámico.
+- [x] **RF-08 — Panel "Acerca de" con hueco para actualizaciones:** modal (`#about-modal`, reutiliza `.modal-overlay`/`.modal-card`) con nombre de la app, versión leída vía `window.__TAURI__.app.getVersion()` (permiso `core:app:allow-version`, tampoco en `core:default`) y crédito a dbv-specs-ops. Incluye un botón "Buscar actualizaciones" deshabilitado con explicación de por qué (RF-05 de `NATIVE_DESKTOP_APPS.md` §4: no se incluye `tauri-plugin-updater` de fábrica, ver Fuera de Alcance) — enseña dónde iría, sin implementarlo.
 - [x] **RF-09 — Tutorial `TAURI_TUTORIAL.md`:** guía práctica de 10 minutos (cómo añadir UI, cómo añadir un comando Rust, cómo se conectan `invoke()`/eventos/API de ventana, cuándo hace falta un permiso nuevo en `capabilities`) usando el propio código de la demo como ejemplo, con enlaces verificados a la documentación oficial de Tauri v2. Enlazado desde `README.md`.
-- [ ] **RF-05 — Selector de idioma ES/EN con i18n mínima:** `src/i18n.js` nuevo, mismo patrón sin librería que `dbv-md-reader` (ADR-017 en su `memory.md`) — dos objetos planos `es`/`en`, `t(clave, vars)`, `applyTranslations()` sobre atributos `data-i18n`/`data-i18n-title`/`data-i18n-placeholder`, detección `localStorage` → `navigator.language` → fallback español. Cubre solo las frases de la demo (RF-01/RF-02). Doble propósito: usabilidad básica y ejemplo vivo de la lección 7 de `dbv-specs-ops/docs/NATIVE_DESKTOP_APPS.md` §4 ("i18n sin librería es válido para apps pequeñas").
+- [x] **RF-05 — Selector de idioma ES/EN con i18n mínima:** `src/i18n.js` nuevo, mismo patrón sin librería que `dbv-md-reader` (ADR-017 en su `memory.md`) — dos objetos planos `es`/`en`, `t(clave, vars)`, `applyTranslations()` sobre atributos `data-i18n`/`data-i18n-title`/`data-i18n-placeholder`, detección `localStorage` → `navigator.language` → fallback español. Cubre solo las frases de la demo (RF-01/RF-02). Doble propósito: usabilidad básica y ejemplo vivo de la lección 7 de `dbv-specs-ops/docs/NATIVE_DESKTOP_APPS.md` §4 ("i18n sin librería es válido para apps pequeñas").
+
+
+### 3.1. Requisitos del Subsistema de IA de Escritorio (template-v0.2.0)
+*Generalización de la arquitectura canónica de 3 niveles para aplicaciones de escritorio (docs/AI_DESKTOP_ARCHITECTURE.md).*
+
+- [x] **RNF-IA.1 — Custodia de Credenciales en el Llavero Seguro del SO:** Las claves de API nunca se guardan en texto plano, ni en ficheros de configuración, ni en `localStorage`. Se almacenan exclusivamente en el llavero nativo del sistema operativo (Windows Credential Manager, macOS Keychain, Linux Secret Service/Freedesktop) a través de Rust (`keyring = "4"`).
+- [x] **RNF-IA.2 — Zero-Footprint en Reposo (Carga Perezosa):** El módulo de IA no consume memoria, hilos ni sockets mientras el usuario no lo abra. Carga dinámica de `src/ai/entry.js` e inyección de DOM solo bajo demanda.
+- [x] **RNF-IA.3 — Modo Local Offline Garantizado:** Capacidad de operar 100% desconectado a través de servidores locales compatibles (Ollama / LM Studio en `localhost`) con coste cero y sin requerir cuenta ni clave.
+- [x] **RNF-IA.4 — Privacidad Estricta:** Ningún dato se envía a terceros sin la selección explícita y consciente del proveedor por parte del usuario. Los agentes ACP locales operan con aislamiento de proceso.
+- [x] **RF-IA-01 — Asistente Conversacional con Contexto de Documento:** Panel lateral con chat reactivo, soporte Markdown, selector dinámico de modelos y gestión de contexto adjunto.
+- [x] **RF-IA-02 — Conexiones Multinivel y Wizard Guiado:** Panel de configuración con autodetección de Ollama/LM Studio, gestión segura de API keys (Anthropic, OpenAI, DeepSeek, Gemini, OpenRouter) y conectores ACP.
+- [x] **RF-IA-03 — Ciclo Atómico de Propuestas y Diff Review:** Las modificaciones sugeridas por la IA se presentan como propuestas atómicas con diff unificado lado a lado antes de ser aplicadas al documento.
+- [x] **RF-IA-04 — Soporte de Agentes de Suscripción vía ACP:** Conexión por `stdin`/`stdout` JSON-RPC con herramientas CLI instaladas en la máquina (Claude Code, ChatGPT CLI, Gemini CLI), permitiendo usar suscripciones existentes sin coste de tokens.
 
 ## 🏗️ 4. Propuesta de Solución Técnica (Resumen)
 *Enlace directo con `ARCHITECTURE.md`.*
@@ -79,7 +92,8 @@ No aplica — `Agent Readiness (Web)` está marcado `Not Applicable` en `project
 
 ## 🧪 8. Criterios de Evaluación y Evals (No Deterministas)
 
-No aplica — el starter no incluye componentes de IA ni prompts en tiempo de ejecución.
+- **Tests unitarios e integración en Rust (`cargo test`):** 40 pruebas automatizadas que verifican el transporte ACP con agente simulado, clasificación de streaming SSE (formatos Anthropic y OpenAI), endpoints Ollama nativo y compatibilidad OpenAI, validación de rutas y operaciones seguras con el llavero del sistema.
+- **Evals de interfaz:** Verificación de carga perezosa sin fugas de memoria, renderizado reactivo de diffs y conmutación de idioma ES/EN dinámico.
 
 ---
 **Instrucción para la IA:** No pases a la fase `/plan` hasta que las "Preguntas Abiertas" críticas hayan sido resueltas o tengan un camino de solución definido.

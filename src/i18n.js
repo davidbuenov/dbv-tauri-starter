@@ -1,4 +1,4 @@
-// i18n mínima sin librería — mismo patrón que dbv-md-reader (ver dbv-specs-ops/docs/NATIVE_DESKTOP_APPS.md
+﻿// i18n mínima sin librería — mismo patrón que dbv-md-reader (ver dbv-specs-ops/docs/NATIVE_DESKTOP_APPS.md
 // §4, lección 7): dos objetos planos, sustitución simple de {placeholder}, sin dependencia nueva.
 //
 // IIFE obligatoria (NATIVE_DESKTOP_APPS.md §3): los scripts clásicos comparten el ámbito global —
@@ -19,7 +19,7 @@
       "modal.confirm": "Cerrar de todas formas",
       "modal.cancel": "Cancelar",
       "lang.label": "Idioma",
-      "toolbar.alwaysOnTop": "Mantener siempre visible",
+      "toolbar.ai": "Asistente de IA (Ctrl+Mayús+I)",`r`n      "ai.connectTitle": "Conectar una IA",`r`n      "toolbar.alwaysOnTop": "Mantener siempre visible",
       "toolbar.alwaysOnTopActive": "Siempre visible (activado)",
       "toolbar.about": "Acerca de",
       "about.title": "Acerca de dbv-tauri-starter",
@@ -43,7 +43,7 @@
       "modal.confirm": "Close anyway",
       "modal.cancel": "Cancel",
       "lang.label": "Language",
-      "toolbar.alwaysOnTop": "Keep always on top",
+      "toolbar.ai": "AI Assistant (Ctrl+Shift+I)",`r`n      "ai.connectTitle": "Connect an AI",`r`n      "toolbar.alwaysOnTop": "Keep always on top",
       "toolbar.alwaysOnTopActive": "Always on top (active)",
       "toolbar.about": "About",
       "about.title": "About dbv-tauri-starter",
@@ -102,5 +102,13 @@
     return currentLang;
   }
 
-  window.dbvI18n = { t, applyTranslations, setLanguage, getLanguage };
+  function registerTranslations(more) {
+    if (!more) return;
+    for (const [lang, strings] of Object.entries(more)) {
+      translations[lang] = Object.assign(translations[lang] || {}, strings);
+    }
+    applyTranslations();
+  }
+
+  window.dbvI18n = { t, applyTranslations, setLanguage, getLanguage, registerTranslations };
 })();

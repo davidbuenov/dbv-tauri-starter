@@ -2,7 +2,7 @@
 
 > **Fase:** `/plan` (Planificación Técnica)
 > **Estado:** Validado
-> **Última Revisión:** 2026-08-21
+> **Última Revisión:** 2026-10-03 (template-v0.2.0)
 
 ---
 
@@ -11,6 +11,8 @@
 | Capa | Tecnología | Justificación |
 | --- | --- | --- |
 | **Core / Backend** | Rust + Tauri v2 | WebView nativo del SO (WebView2/WebKitGTK/WKWebView) en vez de empaquetar Chromium — instalador ~15-20 MB y RAM en reposo <64 MB frente a Electron. Ver `dbv-specs-ops/docs/NATIVE_DESKTOP_APPS.md` §1. |
+| **Capa de IA (Backend)** | Rust (`keyring`, `ureq`, `tokio`) | Custodia segura de secretos en el llavero del SO, clientes HTTP streaming ligeros y transporte ACP JSON-RPC sobre stdio. |
+| **Capa de IA (Frontend)** | Vanilla JS modular (lazy load) | Carga perezosa (`entry.js`), cero dependencias externas, visor de diffs y motor de propuestas atómicas. |
 | **Frontend** | Vanilla JS + HTML/CSS, sin bundler | `withGlobalTauri: true`, sin `<script type="module">` — carga instantánea, offline, y no fuerza un framework a proyectos que migren una app web ya escrita en otra tecnología. Ver `dbv-specs-ops/docs/NATIVE_DESKTOP_APPS.md` §3. |
 | **Framework de metodología** | dbv-specs-ops (vendorizado vía `git subtree`) | Da SDD (`/spec`→`/plan`→`/build`→`/test`→`/code-simplify`→`/ship`), persistencia de contexto (`memory.md`/`task.md`) y las guías de arquitectura nativa/CI/marketplace ya generalizadas desde `dbv-md-reader`. |
 | **Empaquetado** | `@tauri-apps/cli` v2, `bundle.targets: "all"` | Resuelve NSIS/`.deb`+`.AppImage`/`.dmg`+`.app` automáticamente según el SO de build, sin lógica condicional propia. |

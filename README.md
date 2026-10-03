@@ -1,4 +1,4 @@
-# dbv-tauri-starter
+﻿# dbv-tauri-starter
 
 > *Punto de partida para convertir cualquier idea (o app web existente) en una aplicación de escritorio nativa multiplataforma — con el framework de ingeniería [dbv-specs-ops](https://github.com/davidbuenov/dbv-specs-ops) ya integrado.*
 
@@ -78,7 +78,7 @@ La demo que arranca no es un "Hola Mundo" vacío: incluye un comando Rust real
 (`get_greeting_name`), confirmación de cierre de ventana con modal propio (ejemplo vivo de
 [`NATIVE_DESKTOP_APPS.md` §6](./dbv-specs-ops/docs/NATIVE_DESKTOP_APPS.md), el gotcha de permisos
 más caro de resolver a mano), un selector de idioma ES/EN sin librería (`src/i18n.js`, mismo
-patrón que la lección 7 del mismo documento), y una barra superior con Always on Top y "Acerca de".
+patrón que la lección 7 del mismo documento), una barra superior con Always on Top, "Acerca de" y un **asistente de IA integrado y opcional** (`Ctrl+Mayús+I`, ver [`docs/IA.md`](./docs/IA.md)) con detección local (Ollama/LM Studio), claves de API seguras en el almacén nativo del SO (`keyring`) y agentes de suscripción vía ACP (Claude Code, Gemini CLI, Codex, Copilot).
 
 📖 **¿Primera vez con Tauri?** Lee [`TAURI_TUTORIAL.md`](./TAURI_TUTORIAL.md) — 10 minutos, usa el
 propio código de la demo como ejemplo para explicar cómo añadir algo a la interfaz, cómo añadir un
