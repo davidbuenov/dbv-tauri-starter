@@ -1,5 +1,5 @@
-﻿// =============================================================================
-// DBV Typst Editor — Permisos y cambios de un agente (RF-91.6, RF-91.7)
+// =============================================================================
+// dbv-tauri-starter — Permisos y cambios de un agente
 // Copyright (c) 2026 David Bueno Vallejo
 // Licensed under the MIT License. See LICENSE for details.
 // Built with dbv-specs-ops · https://github.com/davidbuenov/dbv-specs-ops
@@ -7,8 +7,8 @@
 //
 // Dos tarjetas en la conversación:
 //   · PERMISO: el agente pide editar, ejecutar o leer algo. Si es una edición,
-//     se enseña el diff que trae la propia petición y si el proyecto compila
-//     con ese cambio, ANTES de que se escriba (spike S-ACP). Nada se concede
+//     se enseña el diff que trae la propia petición y si la comprobación de Markdown
+// lo da por bueno, ANTES de que se escriba (spike S-ACP). Nada se concede
 //     por defecto: Permitir una vez, Permitir siempre en esta conversación o
 //     Denegar, con los textos de las opciones que ofrece el agente.
 //   · CAMBIOS EN DISCO: al acabar el turno, lo que el agente escribió (con
@@ -77,7 +77,7 @@ export function createPermissionCard(params, { toRelative, check, isDirty }) {
   };
 
   if (outside.length) {
-    // RF-91.7: lo que sale de la carpeta del proyecto se deniega, con motivo.
+    // lo que sale de la carpeta del proyecto se deniega, con motivo.
     const reject = (params.options ?? []).find((option) => option.kind?.startsWith('reject'));
     status.textContent = t('ai.permOutside');
     finish(reject?.optionId ?? null, t('ai.permDenied'));

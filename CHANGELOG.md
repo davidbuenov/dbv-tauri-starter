@@ -13,6 +13,20 @@ el prefijo `template-v` en los tags de git (`template-vX.Y.Z`) — deliberadamen
 
 ---
 
+## [template-v0.3.0] — 2026-10-19
+
+### Changed — la IA del starter pasa a ser la real de `dbv-md-reader` 0.18.0 (antes: esqueleto)
+
+- **`src/ai/` y `src-tauri/src/ai/` sustituidos por la implementación completa** (la de `dbv-md-reader`, derivada de `dbv-typst-editor`), generalizada: sin ids de requisitos ni nombres de otro producto; el nombre de la app y el tipo de documento viven en `src/ai/appInfo.js`.
+- **La demo ahora usa la IA de verdad:** un documento de ejemplo (`notas.md`, comando `demo_workspace`) editable y guardable, ✨ en la barra, panel lateral «Asistente», `Ctrl+Mayús+I` y `Ctrl+Alt+I` (IA en línea). El puente con tu app es `buildAiHost` en `src/main.js`.
+- **Lo aprendido en producción, ya incluido:** barrera de rutas en Rust que normaliza las rutas de Windows (`fs::canonicalize` devuelve el prefijo de ruta larga y los agentes no); lectura con LF y restauración de CRLF al escribir; escritura atómica con respaldo si el renombrado falla en Windows y errores que nombran el fichero; salida de la IA sin `innerHTML` (exfiltración por imagen Markdown); sin agente `custom` (ejecución arbitraria por IPC); `ai_model_info`, `ai_list_files`, `ai_read_file`, `ai_search_files`, `ai_write_file` y `ai_delete_created` registrados.
+- **Solo escritorio:** `#[cfg(desktop)]` en `lib.rs` y dependencias (`keyring`, `ureq`, `tokio`, `walkdir`) bajo `cfg(not(any(android, ios)))`.
+- **Arreglado:** `src/i18n.js` tenía un `SyntaxError` (restos de `` `r`n `` de PowerShell dentro de un objeto) que dejaba la demo sin traducciones. Ahora expone también `window.DBV_I18N` (`t`, `getLang`, `setLang`, `register`), que es lo que esperan los módulos de la IA.
+- Tests: `tests/ai/` (154, Vitest + jsdom), `scripts/e2e/` (banco de interfaz en Edge/Chromium con el backend simulado: zero-footprint, conectar, conversación con herramientas, revisión, aplicar con `Ctrl+Z`, guardar, sin exfiltración) y 71 tests de Rust. `docs/IA.md` / `docs/IA.en.md`: sección «Para quien construye una app con esta plantilla» (qué adaptar, qué está resuelto, cómo probar).
+- **Sin verificar:** Linux y macOS (módulos ES con `import()` en WebKitGTK/WKWebView) y la IA dentro de un paquete MSIX.
+
+---
+
 ## [template-v0.2.0] — 2026-10-03
 
 Subsistema canónico completo de IA generativa de escritorio (híbrido local / nube con custodia en llavero nativo del SO / agentes de suscripción vía ACP), frontend vanilla JS modular y zero-footprint, documentación bilingüe para el usuario final y suite de 40 tests unitarios y de integración validados. Incluye además las mejoras de CI para empaquetado AppImage y Cask de Homebrew, y la sincronización con el framework dbv-specs-ops v2.9.0.

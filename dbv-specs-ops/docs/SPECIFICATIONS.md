@@ -53,6 +53,14 @@
 - [x] **RF-IA-03 — Ciclo Atómico de Propuestas y Diff Review:** Las modificaciones sugeridas por la IA se presentan como propuestas atómicas con diff unificado lado a lado antes de ser aplicadas al documento.
 - [x] **RF-IA-04 — Soporte de Agentes de Suscripción vía ACP:** Conexión por `stdin`/`stdout` JSON-RPC con herramientas CLI instaladas en la máquina (Claude Code, ChatGPT CLI, Gemini CLI), permitiendo usar suscripciones existentes sin coste de tokens.
 
+### 3.2. Requisitos del Subsistema de IA — versión real (`template-v0.3.0`)
+*La 0.2.0 declaró RF-IA-01 a RF-IA-04 como hechos con un esqueleto de frontend (lectura de ficheros y listas devolvían vacío, el agente ACP no conversaba, «Aplicar» no aplicaba). Esta versión los cumple de verdad, con la implementación de `dbv-md-reader` 0.18.0.*
+
+- [x] **RF-IA-05 — Demo funcional de punta a punta:** la demo trae un documento de ejemplo (`notas.md`, en la carpeta de datos de la app) que el usuario edita y guarda, y sobre el que la IA conversa, propone cambios y los aplica. *Aceptación:* banco `scripts/e2e/ai-assistant.e2e.mjs` (conversación con herramientas, revisión, aplicar en el editor con `Ctrl+Z`, nada escrito en disco por detrás, «Guardar» con el comando confinado).
+- [x] **RF-IA-06 — Confinamiento y confianza (Rust):** lectura, búsqueda y escritura solo dentro de la carpeta de trabajo (sin `..`, rutas absolutas, `.git` ni enlaces simbólicos que escapen, solo las extensiones de `TEXT_EXTENSIONS`); el contenido de los documentos es un dato, no una orden; la salida de la IA no carga medios remotos; solo los cuatro agentes ACP reconocidos (sin orden libre).
+- [x] **RF-IA-07 — Adaptable por quien usa la plantilla:** `src/ai/appInfo.js`, `TEXT_EXTENSIONS`, `SERVICE` (almacén de claves), `check.rs`, `buildAiHost` y `demo_workspace` son los puntos de adaptación, listados en `docs/IA.md` («Qué adaptar»).
+- [x] **RNF-IA.5 — Solo escritorio:** la IA no se compila en móvil (`cfg(desktop)`).
+
 ## 🏗️ 4. Propuesta de Solución Técnica (Resumen)
 *Enlace directo con `ARCHITECTURE.md`.*
 

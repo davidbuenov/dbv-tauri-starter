@@ -1,40 +1,44 @@
-﻿// =============================================================================
-// dbv-tauri-starter — Herramientas del asistente (Tool Calling)
+// =============================================================================
+// dbv-tauri-starter — Herramientas del asistente
 // Copyright (c) 2026 David Bueno Vallejo
 // Licensed under the MIT License. See LICENSE for details.
 // Built with dbv-specs-ops · https://github.com/davidbuenov/dbv-specs-ops
 // =============================================================================
 //
-// Herramientas seguras que un modelo puede ejecutar:
-//   · list_files: listar ficheros del proyecto
-//   · read_file: leer ficheros de texto (respetando cambios en memoria)
-//   · search_project: buscar texto en el proyecto
-//   · propose_changes: proponer cambios para revisión visual del usuario
+// Lo que un modelo directo puede hacer: listar, leer y buscar en la carpeta del
+// documento, ver el esquema del documento abierto y PROPONER cambios. Todas
+// trabajan con rutas relativas a esa carpeta y las validan; ninguna
+// escribe en disco, accede a la red ni ejecuta programas.
+// Leer usa el contenido del editor si el fichero está abierto.
 //
-// Ninguna herramienta escribe directamente en disco ni ejecuta comandos sin
-// la aprobación expresa y visual del usuario.
+// `propose_changes` acumula en la propuesta de la respuesta y la COMPRUEBA en
+// memoria: si introduce errores nuevos, se lo dice al modelo para que los
+// corrija, como mucho `MAX_FIX_ATTEMPTS` veces.
+//
 
+import { t } from './i18nBridge.js';
 import { applyChange, normalizePath } from './proposal.js';
+import { isSafeRelativePath } from './paths.js';
 
+/** Reintentos de corrección tras una propuesta que no pasa la comprobación. */
 export const MAX_FIX_ATTEMPTS = 2;
+/** Tope de lo que devuelve una lectura (caracteres). */
 const READ_LIMIT = 24000;
 const LIST_LIMIT = 400;
-
-export function isSafeRelativePath(path) {
-  const clean = String(path ?? '').replace(/\\/g, '/');
-  return !clean.startsWith('/') && !clean.includes('../');
-}
+const HIT_LIMIT = 60;
 
 const object = (properties, required = []) => ({ type: 'object', properties, required, additionalProperties: false });
 
-export function newErrors(baseline, checked) {
+/**
+ * Problemas nuevos de una comprobación respecto a la línea base (mismo fichero y
+ * mensaje no cuentan dos veces). `level` filtra por gravedad.
+ */
+export function newProblems(baseline, checked, level = 'error') {
   const key = (d) => `${d.file}|${d.message}`;
   const known = new Map();
-  for (const d of (baseline || []).filter((x) => x.severity === 'error' || x.level === 'error')) {
-    known.set(key(d), (known.get(key(d)) ?? 0) + 1);
-  }
+  for (const d of baseline.filter((x) => x.level === level)) known.set(key(d), (known.get(key(d)) ?? 0) + 1);
   const fresh = [];
-  for (const d of (checked || []).filter((x) => x.severity === 'error' || x.level === 'error')) {
+  for (const d of checked.filter((x) => x.level === level)) {
     const count = known.get(key(d)) ?? 0;
     if (count > 0) known.set(key(d), count - 1);
     else fresh.push(d);
@@ -42,124 +46,140 @@ export function newErrors(baseline, checked) {
   return fresh;
 }
 
+/** Resumen de una comprobación para el modelo y para la revisión. */
 export function describeCheck(baseline, checked) {
-  const baseList = baseline || [];
-  const checkList = checked || [];
-  const fresh = newErrors(baseList, checkList);
-  const baseErrCount = baseList.filter((d) => d.severity === 'error' || d.level === 'error').length;
-  const checkErrCount = checkList.filter((d) => d.severity === 'error' || d.level === 'error').length;
-  const fixed = baseErrCount - (checkErrCount - fresh.length);
-  return { fresh, fixed: Math.max(0, fixed), errors: checkErrCount };
+  const fresh = newProblems(baseline, checked, 'error');
+  const errors = checked.filter((x) => x.level === 'error').length;
+  const fixed = baseline.filter((d) => d.level === 'error').length - (errors - fresh.length);
+  return { fresh, fixed: Math.max(0, fixed), errors, warnings: newProblems(baseline, checked, 'warning') };
 }
+
+const where = (d) => `${d.file ?? ''}${d.line ? `:${d.line}` : ''}`;
 
 /**
  * @param {object} deps
- * @param {() => string} deps.getRoot
- * @param {(root: string, relative: string) => string} [deps.join]
- * @param {(relative: string) => Promise<string|null>} deps.readText
- * @param {() => Promise<string[]>} deps.listFiles
- * @param {(query: string, regex: boolean) => Promise<Array<{relative: string, line: number, text: string}>>} [deps.search]
- * @param {() => Promise<Array>} [deps.diagnostics]
- * @param {(proposal: object) => Promise<Array|null>} deps.checkProposal
- * @param {() => object} deps.getProposal
+ * @param {() => Promise<string[]>} deps.listFiles Rutas relativas de los documentos de la carpeta.
+ * @param {(relative: string) => Promise<string|null>} deps.readText Contenido (editor o disco), o `null` si no existe.
+ * @param {(query: string) => Promise<Array<{relative: string, line: number, text: string}>>} deps.search
+ * @param {() => Array<{level: number, text: string}>} deps.outline Encabezados del documento abierto.
+ * @param {(proposal: object) => Promise<{fresh: Array, fixed: number, warnings: Array}|null>} deps.checkProposal `null` si no se puede comprobar.
+ * @param {() => object} deps.getProposal Propuesta de la respuesta en curso.
  */
 export function createTools(deps) {
   let fixAttempts = 0;
   const safe = (path) => {
     const relative = normalizePath(path);
-    if (!isSafeRelativePath(relative)) throw new Error(`Ruta fuera del proyecto: ${path}`);
+    if (!isSafeRelativePath(relative)) throw new Error(`path outside the document folder: ${path}`);
     return relative;
   };
 
-  const tools = [
+  return [
     {
       name: 'list_files',
-      description: 'List the files in the workspace / project (relative paths).',
+      description: 'List the Markdown documents of the folder of the open document (relative paths).',
       parameters: object({}),
-      label: () => 'Listando ficheros del proyecto',
+      label: () => t('ai.step.listing'),
       run: async () => {
         const files = await deps.listFiles();
         const shown = files.slice(0, LIST_LIMIT);
-        return `${shown.join('\n')}${files.length > shown.length ? `\n… (${files.length - shown.length} más)` : ''}`;
+        return `${shown.join('\n')}${files.length > shown.length ? `\n… (${files.length - shown.length} more)` : ''}`;
       },
     },
     {
       name: 'read_file',
-      description: 'Read a text file from the project. Optional 1-based start_line and end_line.',
+      description: 'Read a Markdown document of the folder (with unsaved editor changes). Optional 1-based line range.',
       parameters: object({ path: { type: 'string' }, start_line: { type: 'integer' }, end_line: { type: 'integer' } }, ['path']),
-      label: (args) => `Leyendo ${args.path ?? ''}`,
+      label: (args) => t('ai.step.reading').replace('{path}', args.path ?? ''),
       run: async ({ path, start_line: start, end_line: end }) => {
         const relative = safe(path);
         const content = await deps.readText(relative);
-        if (content === null) return `error: el fichero «${relative}» no existe`;
+        if (content === null) return `error: ${relative} does not exist`;
         let text = content;
         if (start || end) {
           const lines = content.split('\n');
           text = lines.slice(Math.max(0, (start ?? 1) - 1), end ?? lines.length).join('\n');
         }
-        if (text.length > READ_LIMIT) {
-          return `${text.slice(0, READ_LIMIT)}\n… [recortado a ${READ_LIMIT} caracteres]`;
-        }
-        return text;
+        return text.length > READ_LIMIT ? `${text.slice(0, READ_LIMIT)}\n… (truncated: ${text.length} characters; read a line range)` : text;
+      },
+    },
+    {
+      name: 'search_files',
+      description: 'Search text (case-insensitive) in all Markdown documents of the folder. Returns file:line: text.',
+      parameters: object({ query: { type: 'string' } }, ['query']),
+      label: (args) => t('ai.step.searching').replace('{query}', args.query ?? ''),
+      run: async ({ query }) => {
+        const hits = await deps.search(String(query ?? ''));
+        if (!hits.length) return 'no matches';
+        return hits.slice(0, HIT_LIMIT).map((hit) => `${hit.relative}:${hit.line}: ${hit.text.trim()}`).join('\n');
+      },
+    },
+    {
+      name: 'get_outline',
+      description: 'Headings (outline) of the open document.',
+      parameters: object({}),
+      label: () => t('ai.step.outline'),
+      run: async () => {
+        const outline = deps.outline();
+        return outline.length ? outline.map((h) => `${'  '.repeat(Math.max(0, h.level - 1))}- ${h.text}`).join('\n') : 'no headings';
       },
     },
     {
       name: 'propose_changes',
-      description: 'Propose additions, edits or deletions across files. The user reviews them before applying.',
-      parameters: object({
-        explanation: { type: 'string', description: 'Brief explanation of the changes.' },
-        changes: {
-          type: 'array',
-          items: object(
-            {
-              type: { type: 'string', enum: ['edit', 'create', 'delete'] },
-              path: { type: 'string' },
-              search: { type: 'string', description: 'For edit: exact current text to be replaced.' },
-              replace: { type: 'string', description: 'For edit: new replacement text.' },
-              content: { type: 'string', description: 'For create: full content of the new file.' },
-            },
-            ['type', 'path']
-          ),
+      description:
+        'Propose changes to Markdown documents for the user to review (nothing is written until accepted). Actions: "edit" (exact `search` text → `replace`), "create" (new document with `content`), "replace_all" (whole `content`). the app checks the proposal (unclosed code blocks, unpaired $$, broken relative links) and reports new problems.',
+      parameters: object(
+        {
+          summary: { type: 'string', description: 'One sentence describing the change for the user.' },
+          changes: {
+            type: 'array',
+            items: object(
+              {
+                path: { type: 'string' },
+                action: { type: 'string', enum: ['edit', 'create', 'replace_all'] },
+                search: { type: 'string' },
+                replace: { type: 'string' },
+                content: { type: 'string' },
+              },
+              ['path', 'action'],
+            ),
+          },
         },
-      }, ['explanation', 'changes']),
-      label: () => 'Proponiendo cambios...',
-      run: async ({ explanation, changes }) => {
+        ['changes'],
+      ),
+      // `changes` lo escribe el modelo: un modelo pequeño puede mandar un objeto o un texto.
+      label: (args) => t('ai.step.proposing').replace('{paths}', (Array.isArray(args.changes) ? args.changes : []).map((c) => c?.path).filter(Boolean).join(', ') || '…'),
+      run: async ({ changes = [], summary = '' }) => {
         const proposal = deps.getProposal();
-        if (explanation) proposal.explanation = explanation;
-        for (const change of changes ?? []) {
-          const relative = safe(change.path);
-          const current = (await deps.readText(relative)) ?? '';
-          applyChange(proposal, { ...change, path: relative }, current);
+        if (summary) proposal.summary = summary;
+        const report = [];
+        // Un modelo pequeño manda a veces un solo cambio como objeto en vez de lista.
+        const received = Array.isArray(changes) ? changes : changes && typeof changes === 'object' ? [changes] : [];
+        if (!received.length) {
+          return 'error: no changes were received, so NOTHING was proposed. Call propose_changes again with `changes` as a non-empty array of {path, action, search, replace}. Do not tell the user a proposal was made.';
         }
-        const baseline = (await deps.diagnostics?.()) ?? [];
-        const checked = await deps.checkProposal(proposal);
-        if (!checked) return 'Propuesta registrada. El usuario la revisará en la interfaz.';
-        const summary = describeCheck(baseline, checked);
-        proposal.check = summary;
-        if (summary.fresh.length > 0 && fixAttempts < MAX_FIX_ATTEMPTS) {
-          fixAttempts += 1;
-          const errorsText = summary.fresh.map((e) => `• ${e.file || ''}:${e.line ?? '?'}: ${e.message}`).join('\n');
-          return `Atención: la propuesta introduce errores. Corrige los cambios con otra llamada a propose_changes:\n${errorsText}`;
+        for (const change of received) {
+          const result = await applyChange(proposal, change, (path) => deps.readText(path));
+          report.push(result.ok ? `ok: ${change.action} ${change.path}` : `error: ${change?.path}: ${result.message}`);
         }
-        return summary.fresh.length === 0
-          ? 'Propuesta verificada sin errores. El usuario la revisará en la interfaz.'
-          : 'Propuesta registrada con advertencias.';
+        if (!proposal.files.size) {
+          report.push('NOTHING was proposed: no change modified any file (the edit may be empty or identical to the current text). Tell the user the proposal is empty or retry with a correct edit.');
+        }
+        const checked = proposal.files.size ? await deps.checkProposal(proposal) : null;
+        if (checked) {
+          const { fresh, fixed, warnings } = checked;
+          if (fresh.length) {
+            fixAttempts += 1;
+            const list = fresh.slice(0, 10).map((d) => `- ${where(d)}: ${d.message}`).join('\n');
+            report.push(
+              fixAttempts <= MAX_FIX_ATTEMPTS
+                ? `The proposal introduces ${fresh.length} NEW error(s). Fix them with another propose_changes call:\n${list}`
+                : `The proposal still has ${fresh.length} new error(s):\n${list}\nDo not try again; explain the problem to the user.`,
+            );
+          } else report.push(`The proposal introduces no new errors${fixed ? ` and fixes ${fixed} existing error(s)` : ''}. The user will review it.`);
+          if (warnings.length) report.push(`New warnings (not blocking):\n${warnings.slice(0, 10).map((d) => `- ${where(d)}: ${d.message}`).join('\n')}`);
+        } else if (proposal.files.size) report.push('The proposal could not be checked; the user will review it.');
+        return report.join('\n');
       },
     },
   ];
-
-  if (deps.search) {
-    tools.push({
-      name: 'search_project',
-      description: 'Search for text or regex across project files.',
-      parameters: object({ query: { type: 'string' }, regex: { type: 'boolean' } }, ['query']),
-      label: (args) => `Buscando «${args.query ?? ''}»`,
-      run: async ({ query, regex }) => {
-        const results = await deps.search(query, regex ?? false);
-        return results.map((r) => `${r.relative}:${r.line}: ${r.text}`).slice(0, 50).join('\n') || 'Sin coincidencias.';
-      },
-    });
-  }
-
-  return tools;
 }

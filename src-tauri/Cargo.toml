@@ -1,6 +1,6 @@
 ﻿[package]
 name = "dbv-tauri-starter"
-version = "0.2.0"
+version = "0.3.0"
 description = "dbv-tauri-starter — Tauri v2 + dbv-specs-ops starter template"
 authors = ["David Bueno Vallejo"]
 edition = "2021"
@@ -22,10 +22,20 @@ tauri = { version = "2", features = [] }
 tauri-plugin-opener = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+
+# IA integrada y OPCIONAL (docs/IA.md): solo escritorio. En móvil no hay `keyring` ni procesos hijos
+# para los agentes ACP, y `src/ai/` no se usa.
+[target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
+# Claves de API en el almacén del SO (Credential Manager / Keychain / Secret Service).
 keyring = "4"
+# Cliente HTTP bloqueante para los modelos locales y de nube.
 ureq = { version = "3", features = ["json"] }
+# Solo el canal `oneshot` y los temporizadores de la sesión ACP; sin runtime propio.
 tokio = { version = "1", features = ["sync", "time"] }
+# Listar y buscar ficheros de la carpeta de trabajo y la foto de restauración de los agentes.
 walkdir = "2.5"
 
 [dev-dependencies]
 tempfile = "3"
+# Los tests de la sesión ACP construyen un runtime mínimo.
+tokio = { version = "1", features = ["rt", "macros"] }

@@ -78,7 +78,9 @@ La demo que arranca no es un "Hola Mundo" vacío: incluye un comando Rust real
 (`get_greeting_name`), confirmación de cierre de ventana con modal propio (ejemplo vivo de
 [`NATIVE_DESKTOP_APPS.md` §6](./dbv-specs-ops/docs/NATIVE_DESKTOP_APPS.md), el gotcha de permisos
 más caro de resolver a mano), un selector de idioma ES/EN sin librería (`src/i18n.js`, mismo
-patrón que la lección 7 del mismo documento), una barra superior con Always on Top, "Acerca de" y un **asistente de IA integrado y opcional** (`Ctrl+Mayús+I`, ver [`docs/IA.md`](./docs/IA.md)) con detección local (Ollama/LM Studio), claves de API seguras en el almacén nativo del SO (`keyring`) y agentes de suscripción vía ACP (Claude Code, Gemini CLI, Codex, Copilot).
+patrón que la lección 7 del mismo documento), una barra superior con Always on Top, "Acerca de" y un **asistente de IA integrado y opcional** (✨ o `Ctrl+Mayús+I`, ver [`docs/IA.md`](./docs/IA.md)) que **funciona de verdad sobre un documento de ejemplo** (`notas.md`): detección local (Ollama/LM Studio), claves de API seguras en el almacén nativo del SO (`keyring`), agentes de suscripción vía ACP (Claude Code, Gemini CLI, Codex, Copilot), propuestas que revisas trozo a trozo y IA en línea sobre la selección (`Ctrl+Alt+I`). Cero huella si no lo usas. Viene de `dbv-md-reader` 0.18.0; `docs/IA.md` tiene la lista de **qué adaptar** a tu app.
+
+Tests: `npm test` (Rust), `npm run test:ai` (Vitest + jsdom) y `npm run test:e2e` (Edge/Chromium headless con el backend simulado).
 
 📖 **¿Primera vez con Tauri?** Lee [`TAURI_TUTORIAL.md`](./TAURI_TUTORIAL.md) — 10 minutos, usa el
 propio código de la demo como ejemplo para explicar cómo añadir algo a la interfaz, cómo añadir un

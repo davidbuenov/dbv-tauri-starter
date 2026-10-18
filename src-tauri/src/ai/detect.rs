@@ -1,9 +1,10 @@
 // =============================================================================
-// DBV Typst Editor — Detección de IAs disponibles (RF-90.1, RF-91.1)
+// dbv-tauri-starter — Detección de IAs disponibles
 // Copyright (c) 2026 David Bueno Vallejo
 // Licensed under the MIT License. See LICENSE for details.
 // Built with dbv-specs-ops · https://github.com/davidbuenov/dbv-specs-ops
 // =============================================================================
+//
 //
 // Al abrir «Conectar una IA» (nunca al arrancar la aplicación) se mira qué hay
 // en el equipo: servidores locales escuchando (Ollama, LM Studio) y agentes

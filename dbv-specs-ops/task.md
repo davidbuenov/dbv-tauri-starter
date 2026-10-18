@@ -5,6 +5,7 @@
 * **Estado actual**: ENTREGA COMPLETADA (template-v0.2.0). 40 tests en verde, UI funcional con carga perezosa y documentación bilingüe.
 * **Última decisión técnica**: Desacoplamiento total del frontend mediante carga perezosa (`entry.js`), custodia de API keys en llavero del SO vía `keyring` de Rust y soporte ACP para suscripciones existentes sin costes de tokens.
 * **Próximo paso**: Sellar versión en Git con tag `template-v0.2.0`.
+* **Actualización 2026-10-19 (`template-v0.3.0`)**: la IA es ahora la real de `dbv-md-reader` 0.18.0 (ver `CHANGELOG.md` y ADR-035): demo funcional de punta a punta, 154 tests de Vitest + banco e2e + 71 de Rust. **Publicada** (commit, tag `template-v0.3.0` y push). **Pendiente:** probar a mano con Ollama/Claude Code y en Linux/macOS; subir las Lecciones de `dbv-md-reader` (33, 34 y 35) a `dbv-specs-ops`.
 
 ## Checklist de Tareas
 

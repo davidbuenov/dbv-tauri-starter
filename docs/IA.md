@@ -215,6 +215,55 @@ Las herramientas de los modelos directos **no acceden a la red ni ejecutan progr
 | El agente dice que necesita Node.js | Claude Code y Codex usan `npx` | Instala [Node.js](https://nodejs.org) |
 | El modelo olvida el principio del documento | Contexto demasiado pequeño | Sube el contexto del servidor y el campo **Contexto (tokens)** |
 
+## Para quien construye una app con esta plantilla
+
+Todo lo de arriba funciona **de fábrica** en la demo: pulsa ✨ (`Ctrl/Cmd+Mayús+I`), conecta una IA y pídele cambios sobre el documento de ejemplo (`notas.md`, que se crea en la carpeta de datos de la app). Esta sección explica cómo está hecho y **qué cambiar** al convertir la demo en tu aplicación. La implementación viene de [`dbv-md-reader`](https://github.com/davidbuenov/dbv-md-reader) (v0.18.0, usada en producción) y de `dbv-typst-editor`; aquí se ha generalizado.
+
+### Dónde está cada cosa
+
+| Capa | Fichero | Qué hace |
+| --- | --- | --- |
+| Rust | `src-tauri/src/ai/` | Conexiones y proveedores (`providers.rs`), claves en el almacén del SO (`secrets.rs`), agentes por ACP (`acp.rs`, `detect.rs`), **ficheros confinados** (`files.rs`), comprobación de propuestas (`check.rs`), conversaciones (`store.rs`) |
+| Rust | `src-tauri/src/lib.rs` | Registra los comandos (`#[cfg(desktop)]`) y el comando de la demo `demo_workspace` |
+| Frontend | `src/ai/` | Módulos **ES** cargados bajo demanda (`entry.js` → `aiApp.js`): panel, revisión por trozos, IA en línea, asistente de conexión |
+| Frontend | `src/main.js` (`buildAiHost`) | **El único puente con tu app**: le dice a la IA cuál es el documento abierto, cómo cambiarlo y cómo pintar Markdown |
+| Tests | `tests/ai/`, `scripts/e2e/` | 154 tests de Vitest/jsdom y un banco de interfaz en Edge/Chromium con el backend simulado |
+
+### Qué adaptar (lista de comprobación)
+
+1. **`src/ai/appInfo.js`**: `APP_NAME` y `DOCUMENT_KIND` (con qué trabaja tu usuario). Van a las instrucciones del modelo y a los agentes.
+2. **Extensiones que la IA puede leer y proponer**: `TEXT_EXTENSIONS` en `src-tauri/src/ai/files.rs` (la barrera de verdad) y `src/ai/paths.js` (la primera barrera). Por defecto `.md`, `.markdown`, `.txt`.
+3. **Nombre del servicio del almacén de claves**: `SERVICE` en `src-tauri/src/ai/secrets.rs`. Cámbialo **antes de publicar**: después, las claves ya guardadas quedarían huérfanas.
+4. **`check.rs`**: la comprobación previa de una propuesta (aquí, de Markdown: bloque de código sin cerrar, `$$` sin pareja, enlaces rotos). Sustitúyela por la de tu formato (JSON válido, tu compilador, un linter…); si no hay nada que comprobar, devuelve una lista vacía.
+5. **Instrucciones y herramientas** (`src/ai/context.js`, `src/ai/tools.js`): hablan de «documentos»; ajusta el dominio si tu app trabaja con otra cosa.
+6. **`buildAiHost` en `main.js`** y **`demo_workspace` en `lib.rs`**: sustituye el `<textarea>` de la demo y la carpeta de ejemplo por tu documento y tu carpeta reales. La IA solo necesita una **carpeta de trabajo** (`root`) y, si lo hay, **un documento abierto** con su texto.
+7. **Estilos**: `src/ai/ai.css` trae sus propios tokens (claro/oscuro). Si tu app ya tiene tokens con esos nombres, borra el bloque `:root` y usa los tuyos.
+8. **Privacidad (obligatorio antes de publicar)**: tu política de privacidad y las fichas de las tiendas deben decir que, **solo si el usuario lo activa**, el texto del documento puede enviarse al proveedor que él elija. Mira `docs/privacidad.html` de `dbv-md-reader` como ejemplo.
+9. **Móvil**: la IA es solo de escritorio (`#[cfg(desktop)]`, dependencias `keyring`/`tokio`/`walkdir` bajo `cfg(not(any(android, ios)))`).
+
+### Lo que ya está resuelto (no lo desharás sin querer)
+
+- **Cero huella**: sin IA conectada no se descarga ni un fichero de `src/ai/` (el banco `ai-assistant.e2e.mjs` lo comprueba).
+- **Nada se escribe sin que el usuario lo vea**: la IA propone, tú revisas trozo a trozo; el documento abierto se cambia **en el editor** (se deshace con `Ctrl+Z`), los demás con escritura atómica confinada en Rust.
+- **Confinamiento en Rust** (`resolve_inside`): sin `..`, rutas absolutas, `.git` ni enlaces simbólicos que salgan de la carpeta; solo las extensiones de la lista.
+- **El contenido de los documentos es un dato, no una orden** (inyección indirecta), y **la salida de la IA no puede cargar medios remotos** (exfiltración por imagen Markdown): `src/ai/markdown.js` construye nodos y no usa `innerHTML`. Si lo sustituyes por otro renderizador, **sanea antes de crear el DOM** (el navegador pide la URL en cuanto aparece la `<img>`).
+- **Sin agente «a medida»**: solo los cuatro reconocidos (Claude Code, Gemini CLI, Codex, Copilot CLI). Una orden libre recibida por IPC sería ejecución arbitraria de código.
+- **Rutas de Windows**: `fs::canonicalize` devuelve `\\?\C:\…` y los agentes hablan en `C:\…`; la comparación lo normaliza (si no, todo se denegaba «por salir de la carpeta» sin preguntar).
+- **Finales de línea CRLF**: el modelo propone con `\n`; la IA lee todo con LF y restaura el final de línea original al escribir en disco.
+- **Escritura atómica con respaldo**: si el renombrado falla en Windows (otro programa tiene el fichero abierto), se escribe directamente y los errores nombran el fichero.
+
+### Cómo probarlo
+
+```bash
+npm run test:ai       # Vitest + jsdom (módulos de src/ai/)
+npm run test:e2e      # Edge/Chromium headless con el backend simulado (define EDGE_PATH si no está en la ruta habitual)
+npm test              # cargo test --lib (Rust)
+```
+
+> ⚠️ **Sin verificar en esta plantilla:** Linux y macOS (los módulos ES con `import()` se probaron en el motor Chromium, el de WebView2; WebKitGTK/WKWebView no), y la IA dentro de un paquete MSIX de la Microsoft Store (agentes como procesos hijos y almacén de credenciales).
+
 ---
 
-> Esta guía describe la versión **0.13.0**. La ayuda dentro de la aplicación (**?** → *Asistente de IA*) resume lo esencial; la especificación completa está en [`RF-90`–`RF-96` de SPECIFICATIONS.md](../dbv-specs-ops/docs/SPECIFICATIONS.md).
+---
+
+> Esta guía describe la IA de la plantilla (`template-v0.3.0`, basada en `dbv-md-reader` 0.18.0). La ayuda dentro de la aplicación (**?** → *Asistente de IA*) resume lo esencial; la especificación completa está en [`RF-90`–`RF-96` de SPECIFICATIONS.md](../dbv-specs-ops/docs/SPECIFICATIONS.md).

@@ -1,16 +1,17 @@
-﻿// =============================================================================
+// =============================================================================
 // dbv-tauri-starter — Comandos Tauri de la IA
 // Copyright (c) 2026 David Bueno Vallejo
 // Licensed under the MIT License. See LICENSE for details.
 // Built with dbv-specs-ops · https://github.com/davidbuenov/dbv-specs-ops
 // =============================================================================
 //
+//
 // Frontera con el frontend. Reglas que se cumplen aquí:
 //   · Ningún comando devuelve una clave: como mucho, `hasKey`.
-//   · El chat se pide por `connectionId`; la clave se lee del almacén nativo
-//     justo antes de la petición y la respuesta llega como eventos `ai-stream`.
+//   · El chat se pide por `connectionId`; la clave se lee del almacén justo
+//     antes de la petición y la respuesta llega como eventos `ai-stream`.
 //   · Nada se escribe en el proyecto: conexiones en la carpeta de
-//     configuración del sistema, conversaciones en la de datos de la app.
+//     configuración, conversaciones en la de datos.
 
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -20,7 +21,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use tauri::{AppHandle, Emitter, Manager, State};
 
-use super::check::{self, Diagnostic, FileContent};
+use super::check::{self, FileContent};
 use super::connections::{self, Connection, ConnectionsFile, ProviderKind};
 use super::detect::{self, Detection};
 use super::providers::{self, ChatRequest, StreamEvent};
@@ -37,7 +38,9 @@ fn data_dir(app: &AppHandle) -> Result<PathBuf, AiError> {
 }
 
 /// ¿Puede usarse la clave GUARDADA de `connection`? Solo si la conexión
-/// guardada con ese id apunta al mismo proveedor y la misma dirección.
+/// guardada con ese id apunta al mismo proveedor y la misma dirección: una
+/// dirección cambiada en el formulario (una errata, un intermediario) no debe
+/// recibir la clave sin volver a escribirla.
 pub fn stored_key_allowed(file: &ConnectionsFile, connection: &Connection) -> bool {
     file.connections
         .iter()
@@ -86,17 +89,19 @@ pub fn ai_save_connection(app: AppHandle, state: State<'_, AiState>, request: Sa
             connection.has_key = true;
         }
         None => {
-            let was_stored = stored_key_allowed(&file, &connection);
-            connection.has_key = was_stored && state.secrets.get(&connection.id).is_some();
+            let had_key = file.connections.iter().any(|c| c.id == connection.id && c.has_key);
+            if had_key && !stored_key_allowed(&file, &connection) {
+                return Err(AiError::Config("cambiaste la dirección de la conexión: vuelve a escribir la clave".into()));
+            }
+            connection.has_key = had_key;
         }
     }
-    if let Some(index) = file.connections.iter().position(|c| c.id == connection.id) {
-        file.connections[index] = connection.clone();
-    } else {
-        file.connections.push(connection.clone());
+    match file.connections.iter_mut().find(|c| c.id == connection.id) {
+        Some(existing) => *existing = connection.clone(),
+        None => file.connections.push(connection.clone()),
     }
     if request.activate || file.active.is_none() {
-        file.active = Some(connection.id);
+        file.active = Some(connection.id.clone());
     }
     connections::save(&dir, &file)?;
     Ok(SavedConnection { file, key_storage })
@@ -105,11 +110,11 @@ pub fn ai_save_connection(app: AppHandle, state: State<'_, AiState>, request: Sa
 /// Elimina la conexión y su clave del almacén.
 #[tauri::command]
 pub fn ai_delete_connection(app: AppHandle, state: State<'_, AiState>, id: String) -> Result<ConnectionsFile, AiError> {
-    let _ = state.secrets.delete(&id);
     let dir = config_dir(&app)?;
     let mut file = connections::load(&dir)?;
+    state.secrets.delete(&id)?;
     file.connections.retain(|c| c.id != id);
-    if file.active.as_deref() == Some(&id) {
+    if file.active.as_deref() == Some(id.as_str()) {
         file.active = file.connections.first().map(|c| c.id.clone());
     }
     connections::save(&dir, &file)?;
@@ -139,6 +144,8 @@ pub struct ProviderInfo {
     pub base_url: &'static str,
     pub cloud: bool,
     pub context_tokens: u32,
+    /// Tope de tokens por respuesta por defecto; `None` en las nubes.
+    pub max_output_tokens: Option<u32>,
 }
 
 #[tauri::command]
@@ -146,7 +153,13 @@ pub fn ai_providers() -> Vec<ProviderInfo> {
     use ProviderKind::*;
     [Ollama, LmStudio, OpenAiCompatible, Anthropic, OpenAi, Gemini, OpenRouter, Agent]
         .into_iter()
-        .map(|provider| ProviderInfo { provider, base_url: provider.default_base_url(), cloud: provider.is_cloud(), context_tokens: provider.default_context() })
+        .map(|provider| ProviderInfo {
+            provider,
+            base_url: provider.default_base_url(),
+            cloud: provider.is_cloud(),
+            context_tokens: provider.default_context(),
+            max_output_tokens: provider.default_max_output(),
+        })
         .collect()
 }
 
@@ -186,6 +199,15 @@ pub enum StreamOrError {
 
 /// Lanza una petición de chat con la conexión `connection_id`. Vuelve en
 /// seguida; la respuesta llega por `ai-stream` y termina con `done` o `error`.
+/// Tamaño, contexto máximo y capacidades del modelo de una conexión (solo Ollama).
+#[tauri::command]
+pub async fn ai_model_info(connection: Connection) -> Result<Option<providers::ModelInfo>, AiError> {
+    connection.validate()?;
+    tauri::async_runtime::spawn_blocking(move || providers::model_info(&connection))
+        .await
+        .map_err(|error| AiError::Server(error.to_string()))?
+}
+
 #[tauri::command]
 pub fn ai_chat(app: AppHandle, state: State<'_, AiState>, request_id: String, connection_id: String, request: ChatRequest) -> Result<(), AiError> {
     let file = connections::load(&config_dir(&app)?)?;
@@ -224,13 +246,11 @@ pub fn ai_cancel(state: State<'_, AiState>, request_id: String) {
     }
 }
 
-/// Comprueba en memoria los errores y advertencias de una propuesta de cambios.
+/// Problemas que tendría la carpeta con `files` sustituidos. Barato, pero toca el
+/// disco para comprobar enlaces: fuera del hilo de la interfaz.
 #[tauri::command]
-pub async fn ai_check_proposal(state: State<'_, AiState>, root: String, main: String, files: Vec<FileContent>) -> Result<Vec<Diagnostic>, AiError> {
-    let worlds = state.checks.clone();
-    tauri::async_runtime::spawn_blocking(move || check::check(&worlds, &root, &main, &files))
-        .await
-        .map_err(|error| AiError::Server(error.to_string()))?
+pub async fn ai_check_proposal(root: String, files: Vec<FileContent>) -> Result<check::CheckOutcome, AiError> {
+    tauri::async_runtime::spawn_blocking(move || check::check(&root, &files)).await.map_err(|error| AiError::Server(error.to_string()))?
 }
 
 /// Estado de la IA del proyecto (conversaciones, avisos de nube aceptados).
@@ -242,12 +262,6 @@ pub fn ai_project_state_load(app: AppHandle, root: String) -> Result<Value, AiEr
 #[tauri::command]
 pub fn ai_project_state_save(app: AppHandle, root: String, value: Value) -> Result<(), AiError> {
     store::save(&data_dir(&app)?, &root, &value)
-}
-
-/// Libera recursos al cerrar el proyecto.
-#[tauri::command]
-pub fn ai_release(state: State<'_, AiState>) {
-    state.checks.release();
 }
 
 #[cfg(test)]
@@ -265,6 +279,8 @@ mod tests {
             context_tokens: None,
             supports_tools: None,
             supports_images: None,
+            reasoning: None,
+            max_output_tokens: None,
         }
     }
 

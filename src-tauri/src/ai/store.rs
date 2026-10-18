@@ -1,9 +1,10 @@
-﻿// =============================================================================
+// =============================================================================
 // dbv-tauri-starter — Conversaciones y avisos de nube por proyecto
 // Copyright (c) 2026 David Bueno Vallejo
 // Licensed under the MIT License. See LICENSE for details.
 // Built with dbv-specs-ops · https://github.com/davidbuenov/dbv-specs-ops
 // =============================================================================
+//
 //
 // El estado de la IA de cada proyecto (conversaciones y proveedores en la nube
 // ya aceptados) se guarda en la carpeta de datos de la aplicación, NUNCA en el

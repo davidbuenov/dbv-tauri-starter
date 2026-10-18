@@ -1,19 +1,24 @@
-﻿// =============================================================================
+// =============================================================================
 // dbv-tauri-starter — IA integrada: backend
 // Copyright (c) 2026 David Bueno Vallejo
 // Licensed under the MIT License. See LICENSE for details.
 // Built with dbv-specs-ops · https://github.com/davidbuenov/dbv-specs-ops
 // =============================================================================
 //
-// Rust hace solo lo que el frontend no debe hacer:
-// custodiar las claves en el almacén del sistema operativo (keyring),
-// hablar con la red/servidores locales y validar propuestas en memoria.
+// Rust hace solo lo que el frontend no debe hacer: custodiar las claves, hablar
+// con la red, lanzar a los agentes y tocar el disco DENTRO de la carpeta del
+// documento. El bucle del asistente (herramientas, contexto, propuestas) vive en
+// el frontend, donde está el contenido sin guardar del editor.
+//
+// Todo este módulo es solo de escritorio (`#[cfg(desktop)]` en `lib.rs`): en
+// Android no hay Modo Edición, ni `keyring`, ni procesos hijos.
 
 pub mod acp;
 pub mod check;
 pub mod commands;
 pub mod connections;
 pub mod detect;
+pub mod files;
 pub mod providers;
 pub mod secrets;
 pub mod store;
@@ -48,6 +53,8 @@ pub enum AiError {
     Config(String),
     /// El almacén de credenciales del sistema falló.
     SecretStore(String),
+    /// Una ruta que se sale de la carpeta del documento.
+    Outside(String),
 }
 
 impl std::fmt::Display for AiError {
@@ -62,7 +69,8 @@ impl std::fmt::Display for AiError {
             | Self::Server(m)
             | Self::Cancelled(m)
             | Self::Config(m)
-            | Self::SecretStore(m) => m,
+            | Self::SecretStore(m)
+            | Self::Outside(m) => m,
         };
         write!(f, "{message}")
     }
@@ -74,8 +82,7 @@ impl std::error::Error for AiError {}
 #[derive(Default)]
 pub struct AiState {
     pub secrets: secrets::Secrets,
-    pub checks: Arc<check::CheckWorlds>,
-    /// Peticiones en curso -> su bandera de cancelación.
+    /// Peticiones en curso → su bandera de cancelación.
     pub running: Mutex<HashMap<String, Arc<AtomicBool>>>,
 }
 
@@ -87,5 +94,11 @@ mod tests {
     fn el_error_viaja_con_su_tipo() {
         let raw = serde_json::to_string(&AiError::Auth("clave mala".into())).unwrap();
         assert_eq!(raw, r#"{"kind":"auth","message":"clave mala"}"#);
+    }
+
+    #[test]
+    fn una_ruta_fuera_de_la_carpeta_tiene_su_propio_tipo() {
+        let raw = serde_json::to_string(&AiError::Outside("../x".into())).unwrap();
+        assert_eq!(raw, r#"{"kind":"outside","message":"../x"}"#);
     }
 }

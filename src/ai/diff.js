@@ -1,5 +1,5 @@
 // =============================================================================
-// DBV Typst Editor — Diferencias por líneas para revisar propuestas (RF-93)
+// dbv-tauri-starter — Diferencias por líneas para revisar propuestas
 // Copyright (c) 2026 David Bueno Vallejo
 // Licensed under the MIT License. See LICENSE for details.
 // Built with dbv-specs-ops · https://github.com/davidbuenov/dbv-specs-ops
@@ -10,7 +10,7 @@
 // tras recortar el principio y el final comunes, que es lo habitual en una
 // edición) y se aplican solo las aceptadas.
 //
-// `rebase` resuelve RF-93.5: la propuesta se calculó sobre un texto BASE; si el
+// `rebase` resuelve: la propuesta se calculó sobre un texto BASE; si el
 // usuario cambió el fichero después, cada trozo aceptado se recoloca en el
 // texto ACTUAL solo si las líneas que toca siguen intactas. Lo que no casa se
 // devuelve como conflicto y no se aplica en silencio.

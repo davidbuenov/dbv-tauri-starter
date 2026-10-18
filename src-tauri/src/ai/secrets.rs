@@ -1,13 +1,14 @@
-﻿// =============================================================================
-// dbv-tauri-starter — Claves de API en el almacén del sistema (RNF-IA.5)
+// =============================================================================
+// dbv-tauri-starter — Claves de API en el almacén del sistema
 // Copyright (c) 2026 David Bueno Vallejo
 // Licensed under the MIT License. See LICENSE for details.
 // Built with dbv-specs-ops · https://github.com/davidbuenov/dbv-specs-ops
 // =============================================================================
 //
+//
 // La clave de una conexión se guarda en el Administrador de credenciales de
 // Windows, el Llavero de macOS o el Secret Service de Linux (crate `keyring`),
-// con el servicio `dbv-typst-editor` y la conexión como cuenta. Nunca toca un
+// con el servicio `dbv-tauri-starter` y la conexión como cuenta. Nunca toca un
 // fichero de la aplicación, el proyecto ni el frontend.
 //
 // Si el sistema no tiene almacén (un Linux sin Secret Service), la clave se
@@ -18,6 +19,8 @@ use std::sync::Mutex;
 
 use super::AiError;
 
+/// Nombre del servicio en el almacén del sistema. ADAPTAR: cámbialo por el de tu app (y no lo cambies
+/// después de publicar: las claves ya guardadas quedarían huérfanas).
 const SERVICE: &str = "dbv-tauri-starter";
 
 /// Dónde quedó guardada una clave.

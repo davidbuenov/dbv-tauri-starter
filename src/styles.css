@@ -172,6 +172,68 @@ button {
   margin-right: auto;
 }
 
+/* ─── Documento de demostración para la IA (docs/IA.md) ───────────────────── */
+.demo-divider {
+  width: min(520px, 90vw);
+  margin: 1.5em auto;
+  border: 0;
+  border-top: 1px solid #d1d5db;
+}
+
+.doc-editor {
+  position: relative;
+  width: min(640px, 92vw);
+  margin: 0 auto;
+}
+
+#demo-doc {
+  display: block;
+  width: 100%;
+  min-height: 12em;
+  box-sizing: border-box;
+  resize: vertical;
+  padding: 0.6em 0.8em;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.9em;
+  line-height: 1.5;
+  text-align: left;
+  color: #0f0f0f;
+  background-color: #ffffff;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+}
+
+.doc-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.8em;
+  margin: 0.8em 0 2em;
+}
+
+#doc-status {
+  font-size: 0.85em;
+  color: #6b6b6b;
+}
+
+.app-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%);
+  max-width: min(520px, 90vw);
+  padding: 0.6em 1em;
+  border-radius: 8px;
+  background: #1f2937;
+  color: #ffffff;
+  font-size: 0.9em;
+  z-index: 400;
+}
+
+.app-toast-error {
+  background: #991b1b;
+}
+
 .hidden {
   display: none;
 }
@@ -225,6 +287,16 @@ button {
   :root {
     color: #f6f6f6;
     background-color: #2f2f2f;
+  }
+
+  #demo-doc {
+    color: #f6f6f6;
+    background-color: #1e1e1e;
+    border-color: #404040;
+  }
+
+  .demo-divider {
+    border-top-color: #404040;
   }
 
   a:hover {

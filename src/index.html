@@ -16,6 +16,15 @@
     <header class="topbar">
       <h1 data-i18n="app.title">dbv-tauri-starter</h1>
       <div class="toolbar-actions">
+        <!-- IA opcional (docs/IA.md): sin ninguna IA conectada, pulsarlo abre «Conectar una IA» y no se carga nada antes -->
+        <button
+          id="btn-ai"
+          class="btn-icon"
+          data-i18n-title="ai.button"
+          title="Asistente de IA (Ctrl+Mayús+I)"
+        >
+          ✨
+        </button>
         <button
           id="btn-always-on-top"
           class="btn-icon"
@@ -61,6 +70,20 @@
       <p class="dirty-hint" data-i18n="demo.dirtyHint">
         Tienes cambios sin guardar en memoria — cierra la ventana para probar la confirmación.
       </p>
+
+      <hr class="demo-divider" />
+
+      <h2 data-i18n="demo.docHeading">Prueba la IA con un documento</h2>
+      <p id="doc-hint" class="dirty-hint"></p>
+      <div class="doc-editor">
+        <!-- La IA en línea (Ctrl+Alt+I) pinta aquí su barra: ver `host.elements.editorOverlay` en main.js -->
+        <div id="editor-overlay"></div>
+        <textarea id="demo-doc" spellcheck="false" aria-label="notas.md"></textarea>
+      </div>
+      <div class="doc-actions">
+        <button id="doc-save" data-i18n="demo.docSave">Guardar</button>
+        <span id="doc-status" role="status"></span>
+      </div>
     </main>
 
     <div id="discard-modal" class="modal-overlay hidden">
@@ -97,17 +120,32 @@
         </div>
       </div>
     </div>
-    <!-- Panel Lateral de IA -->
+    <!-- Asistente de IA: lo rellena `src/ai/` al cargarse, no antes -->
     <aside id="ai-panel-container" class="ai-sidebar hidden"></aside>
 
-    <!-- Modal «Conectar una IA» -->
+    <!-- «Conectar una IA»: el contenido lo pinta la IA al cargarse -->
     <div id="ai-connect-modal" class="modal-overlay hidden">
-      <div class="modal-card modal-card--wide">
-        <div class="modal-header">
-          <h3 data-i18n="ai.connectTitle">Conectar una IA</h3>
-          <button id="ai-connect-close" class="btn-icon" title="Cerrar">&times;</button>
-        </div>
-        <div id="ai-connect-body"></div>
+      <div id="ai-connect-backdrop" class="modal-backdrop"></div>
+      <div id="ai-connect-card" class="modal-card ai-connect-card">
+        <button id="ai-connect-close" class="btn-icon" data-i18n-title="action.close" title="Cerrar">✕</button>
+        <h2 data-i18n="ai.connectTitle">Conectar una IA</h2>
+        <div id="ai-connect-body" class="ai-form"></div>
+      </div>
+    </div>
+
+    <!-- Confirmación de la IA (aviso de nube, borrar conversación) -->
+    <div id="ai-confirm-modal" class="modal-overlay hidden">
+      <div id="ai-confirm-backdrop" class="modal-backdrop"></div>
+      <div
+        id="ai-confirm-card"
+        class="modal-card ai-confirm-card"
+        role="alertdialog"
+        aria-modal="true"
+        aria-labelledby="ai-confirm-title"
+      >
+        <h2 id="ai-confirm-title"></h2>
+        <p id="ai-confirm-text"></p>
+        <div id="ai-confirm-actions" class="ai-confirm-card__actions"></div>
       </div>
     </div>
   </body>

@@ -1,5 +1,5 @@
 // =============================================================================
-// DBV Typst Editor — Sesión con un agente por ACP (RF-91)
+// dbv-tauri-starter — Sesión con un agente por ACP
 // Copyright (c) 2026 David Bueno Vallejo
 // Licensed under the MIT License. See LICENSE for details.
 // Built with dbv-specs-ops · https://github.com/davidbuenov/dbv-specs-ops
@@ -8,14 +8,16 @@
 // Habla el protocolo con el agente a través del transporte de Rust:
 // `initialize` → `session/new` (con la carpeta del proyecto) → un
 // `session/prompt` por mensaje del usuario. Atiende lo que pide el agente:
-//   · `session/request_permission` → la interfaz decide (nunca solo, RF-91.7);
+//   · `session/request_permission` → la interfaz decide (nunca solo);
 //   · `fs/read_text_file` → contenido del editor si está abierto, confinado al
 //     proyecto;
-//   · `fs/write_text_file` → NO escribe: pasa a la propuesta del turno (RF-91.5).
+//   · `fs/write_text_file` → NO escribe: pasa a la propuesta del turno.
 // Antes de cada turno se toma un punto de restauración; al acabar, se piden
-// los cambios que el agente hizo en disco por su cuenta (RF-91.6).
+// los cambios que el agente hizo en disco por su cuenta.
 
-/** Versión del protocolo que habla DBV. */
+import { APP_NAME } from './appInfo.js';
+
+/** Versión del protocolo ACP que habla la app. */
 export const PROTOCOL_VERSION = 1;
 
 /**
@@ -35,7 +37,8 @@ export function describeUpdate(update) {
 
 /** Ruta relativa de `absolute` dentro de `root`, o `null` si está fuera. */
 export function insideProject(root, absolute) {
-  const norm = (path) => String(path ?? '').replace(/\\/g, '/').replace(/\/+$/, '');
+  // `fs::canonicalize` de Windows devuelve `\\?\D:\…` (o `\\?\UNC\srv\…`): el agente habla en `D:\…`.
+  const norm = (path) => String(path ?? '').replace(/\\/g, '/').replace(/^\/\/\?\/UNC\//i, '//').replace(/^\/\/\?\//, '').replace(/\/+$/, '');
   const base = norm(root);
   const target = norm(absolute);
   const caseless = /^[a-z]:/i.test(base);
@@ -88,17 +91,17 @@ export function createAcpSession({ backend, getRoot, readText, askPermission, st
       } else if (method === 'fs/read_text_file') {
         const relative = insideProject(root, params.path);
         const content = relative === null ? null : await readText(relative);
-        if (content === null) await respond(id, null, relative === null ? 'fuera del proyecto: DBV no da acceso' : 'el fichero no existe');
+        if (content === null) await respond(id, null, relative === null ? 'fuera del proyecto: la app no da acceso' : 'el fichero no existe');
         else await respond(id, { content: sliceLines(content, params.line, params.limit) });
       } else if (method === 'fs/write_text_file') {
         const relative = insideProject(root, params.path);
-        if (relative === null) await respond(id, null, 'fuera del proyecto: DBV no da acceso');
+        if (relative === null) await respond(id, null, 'fuera del proyecto: la app no da acceso');
         else {
           await stageWrite(relative, String(params.content ?? ''));
           await respond(id, null);
         }
       } else {
-        await respond(id, null, `método no admitido por DBV: ${method}`);
+        await respond(id, null, `método no admitido por la app: ${method}`);
       }
     } catch (error) {
       await respond(id, null, error?.message ?? String(error));
@@ -121,9 +124,11 @@ export function createAcpSession({ backend, getRoot, readText, askPermission, st
     const init = await backend.acpRequest('initialize', {
       protocolVersion: PROTOCOL_VERSION,
       clientCapabilities: { fs: { readTextFile: true, writeTextFile: true }, terminal: false },
-      clientInfo: { name: 'dbv-typst-editor', title: 'DBV Typst Editor' },
+      clientInfo: { name: APP_NAME, title: APP_NAME },
     });
     if (!init.ok) throw Object.assign(new Error(init.error.message), { kind: 'network' });
+    // Sin servidor MCP propio (decidido en /spec de la 0.18.0): el agente usa sus propias herramientas
+    // y la app le deja leer y proponer ficheros por el protocolo.
     const session = await backend.acpRequest('session/new', { cwd: currentRoot, mcpServers: [] });
     if (!session.ok) throw Object.assign(new Error(session.error.message), { kind: session.error.kind === 'badRequest' ? 'auth' : session.error.kind });
     spec = nextSpec;

@@ -215,6 +215,55 @@ The direct models' tools **cannot reach the network or run programs**: they only
 | The agent says it needs Node.js | Claude Code and Codex use `npx` | Install [Node.js](https://nodejs.org) |
 | The model forgets the start of the document | Context too small | Raise the server's context and the **Context (tokens)** field |
 
+## For whoever builds an app from this template
+
+Everything above works **out of the box** in the demo: press ✨ (`Ctrl/Cmd+Shift+I`), connect an AI and ask it for changes to the sample document (`notas.md`, created in the app's data folder). This section explains how it is built and **what to change** when you turn the demo into your app. The implementation comes from [`dbv-md-reader`](https://github.com/davidbuenov/dbv-md-reader) (v0.18.0, used in production) and `dbv-typst-editor`; here it has been generalized.
+
+### Where everything lives
+
+| Layer | File | What it does |
+| --- | --- | --- |
+| Rust | `src-tauri/src/ai/` | Connections and providers (`providers.rs`), API keys in the OS store (`secrets.rs`), agents over ACP (`acp.rs`, `detect.rs`), **confined files** (`files.rs`), proposal checks (`check.rs`), conversations (`store.rs`) |
+| Rust | `src-tauri/src/lib.rs` | Registers the commands (`#[cfg(desktop)]`) and the demo command `demo_workspace` |
+| Frontend | `src/ai/` | **ES** modules loaded on demand (`entry.js` → `aiApp.js`): panel, hunk-by-hunk review, inline AI, connection wizard |
+| Frontend | `src/main.js` (`buildAiHost`) | **The only bridge with your app**: tells the AI which document is open, how to change it and how to render Markdown |
+| Tests | `tests/ai/`, `scripts/e2e/` | 154 Vitest/jsdom tests and a UI bench in Edge/Chromium with a simulated backend |
+
+### What to adapt (checklist)
+
+1. **`src/ai/appInfo.js`**: `APP_NAME` and `DOCUMENT_KIND` (what your user works with). They go into the model's instructions and to the agents.
+2. **Extensions the AI may read and propose**: `TEXT_EXTENSIONS` in `src-tauri/src/ai/files.rs` (the real barrier) and `src/ai/paths.js` (the first barrier). Default: `.md`, `.markdown`, `.txt`.
+3. **Key-store service name**: `SERVICE` in `src-tauri/src/ai/secrets.rs`. Change it **before publishing**: afterwards, keys already saved would be orphaned.
+4. **`check.rs`**: the pre-check of a proposal (here, for Markdown: unclosed code block, unpaired `$$`, broken links). Replace it with your format's check (valid JSON, your compiler, a linter…); if there is nothing to check, return an empty list.
+5. **Instructions and tools** (`src/ai/context.js`, `src/ai/tools.js`): they talk about «documents»; adjust the domain if your app works with something else.
+6. **`buildAiHost` in `main.js`** and **`demo_workspace` in `lib.rs`**: replace the demo `<textarea>` and the sample folder with your real document and folder. The AI only needs a **working folder** (`root`) and, if any, **one open document** with its text.
+7. **Styles**: `src/ai/ai.css` ships its own tokens (light/dark). If your app already has tokens with those names, delete the `:root` block and use yours.
+8. **Privacy (mandatory before publishing)**: your privacy policy and store listings must say that, **only if the user turns it on**, the document text may be sent to the provider they choose. See `dbv-md-reader`'s `docs/privacidad.html` as an example.
+9. **Mobile**: the AI is desktop-only (`#[cfg(desktop)]`, `keyring`/`tokio`/`walkdir` under `cfg(not(any(android, ios)))`).
+
+### What is already solved (you won't undo it by accident)
+
+- **Zero footprint**: with no AI connected, not a single `src/ai/` file is downloaded (the `ai-assistant.e2e.mjs` bench checks it).
+- **Nothing is written without the user seeing it**: the AI proposes, you review hunk by hunk; the open document is changed **in the editor** (undo with `Ctrl+Z`), the others with an atomic, confined write in Rust.
+- **Confinement in Rust** (`resolve_inside`): no `..`, absolute paths, `.git` or symlinks leaving the folder; only the listed extensions.
+- **Document content is data, not an instruction** (indirect injection), and **the AI's output cannot load remote media** (Markdown-image exfiltration): `src/ai/markdown.js` builds nodes and never uses `innerHTML`. If you replace it with another renderer, **sanitize before creating the DOM** (the browser requests the URL as soon as the `<img>` appears).
+- **No «custom» agent**: only the four recognized ones (Claude Code, Gemini CLI, Codex, Copilot CLI). A free-form command received over IPC would be arbitrary code execution.
+- **Windows paths**: `fs::canonicalize` returns `\\?\C:\…` while agents speak `C:\…`; the comparison normalizes it (otherwise everything was denied «for leaving the folder» without asking).
+- **CRLF line endings**: the model proposes with `\n`; the AI reads everything as LF and restores the original line ending when writing to disk.
+- **Atomic write with a fallback**: if the rename fails on Windows (another program has the file open), it writes directly and errors name the file.
+
+### How to test it
+
+```bash
+npm run test:ai       # Vitest + jsdom (src/ai/ modules)
+npm run test:e2e      # headless Edge/Chromium with a simulated backend (set EDGE_PATH if it is not in the usual place)
+npm test              # cargo test --lib (Rust)
+```
+
+> ⚠️ **Not verified in this template:** Linux and macOS (the ES modules with `import()` were tested in the Chromium engine, the one WebView2 uses; WebKitGTK/WKWebView were not), and the AI inside a Microsoft Store MSIX package (agents as child processes and the credential store).
+
 ---
 
-> This guide describes version **0.13.0**. The in-app help (**?** → *AI assistant*) summarizes the essentials; the full specification is in [`RF-90`–`RF-96` of SPECIFICATIONS.md](../dbv-specs-ops/docs/SPECIFICATIONS.md) (in Spanish).
+---
+
+> This guide describes the template's AI (`template-v0.3.0`, based on `dbv-md-reader` 0.18.0). The in-app help (**?** → *AI assistant*) summarizes the essentials; the full specification is in [`RF-90`–`RF-96` of SPECIFICATIONS.md](../dbv-specs-ops/docs/SPECIFICATIONS.md) (in Spanish).

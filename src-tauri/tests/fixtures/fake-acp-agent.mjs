@@ -1,5 +1,5 @@
 // =============================================================================
-// DBV Typst Editor — Agente ACP falso para los tests del transporte (RF-91.11)
+// dbv-tauri-starter — Agente ACP falso para los tests del transporte
 // Copyright (c) 2026 David Bueno Vallejo
 // Licensed under the MIT License. See LICENSE for details.
 // Built with dbv-specs-ops · https://github.com/davidbuenov/dbv-specs-ops
@@ -38,11 +38,11 @@ createInterface({ input: process.stdin }).on('line', async (line) => {
   } else if (message.method === 'session/prompt') {
     const permission = await ask('session/request_permission', {
       sessionId: 's1',
-      toolCall: { toolCallId: 't1', title: 'Edit main.typ', kind: 'edit', content: [{ type: 'diff', path: join(cwd, 'main.typ'), oldText: '= Hola', newText: '= Hola, agente' }] },
+      toolCall: { toolCallId: 't1', title: 'Edit main.md', kind: 'edit', content: [{ type: 'diff', path: join(cwd, 'main.md'), oldText: '# Hola', newText: '# Hola, agente' }] },
       options: [{ optionId: 'allow', kind: 'allow_once', name: 'Allow' }, { optionId: 'reject', kind: 'reject_once', name: 'Reject' }],
     });
-    await ask('fs/read_text_file', { sessionId: 's1', path: join(cwd, 'main.typ') });
-    if (permission?.outcome?.optionId === 'allow') writeFileSync(join(cwd, 'main.typ'), '= Hola, agente');
+    await ask('fs/read_text_file', { sessionId: 's1', path: join(cwd, 'main.md') });
+    if (permission?.outcome?.optionId === 'allow') writeFileSync(join(cwd, 'main.md'), '# Hola, agente');
     send({ method: 'session/update', params: { sessionId: 's1', update: { sessionUpdate: 'agent_message_chunk', content: { type: 'text', text: 'Hecho.' } } } });
     send({ id: message.id, result: { stopReason: 'end_turn' } });
   }

@@ -1,9 +1,10 @@
 // =============================================================================
-// DBV Typst Editor — Agentes instalados por ACP: transporte (RF-91)
+// dbv-tauri-starter — Agentes instalados por ACP: transporte
 // Copyright (c) 2026 David Bueno Vallejo
 // Licensed under the MIT License. See LICENSE for details.
 // Built with dbv-specs-ops · https://github.com/davidbuenov/dbv-specs-ops
 // =============================================================================
+//
 //
 // El Agent Client Protocol es JSON-RPC 2.0, una línea por mensaje, por la
 // entrada y salida estándar del agente. Este módulo es solo TRANSPORTE:
@@ -17,8 +18,8 @@
 //     cuenta (spike S-ACP: Claude Code escribe así tras pedir permiso).
 // Lo que se decide —qué se permite, qué se enseña— lo decide el frontend.
 //
-// DBV no instala nada: si falta el programa o Node.js, se dice (RF-91.4). Las
-// credenciales son las del propio agente; DBV no las ve (RF-91.3).
+// La app no instala nada: si falta el programa o Node.js, se dice. Las
+// credenciales son las del propio agente; la app no las ve.
 
 use std::collections::HashMap;
 use std::io::{BufRead, BufReader, Read, Write};
@@ -33,29 +34,34 @@ use tauri::{AppHandle, Emitter, State};
 use tokio::sync::oneshot;
 
 use super::detect::{launcher, which};
+use super::files::{is_skipped_dir, is_text_document};
 use super::AiError;
 
 /// Paquetes de npm de los adaptadores ACP (comprobados en npm el 2026-10-02).
 pub const CLAUDE_ADAPTER: &str = "@agentclientprotocol/claude-agent-acp";
 pub const CODEX_ADAPTER: &str = "@zed-industries/codex-acp";
 
-/// Tamaño máximo de un fichero del punto de restauración (los de texto de un
-/// proyecto Typst son pequeños; un CSV enorme no se vigila).
+/// Tamaño máximo de un fichero del punto de restauración (los .md son pequeños;
+/// uno enorme no se vigila).
 const SNAPSHOT_MAX_BYTES: u64 = 2 * 1024 * 1024;
 const SNAPSHOT_MAX_FILES: usize = 4000;
+/// La carpeta de un documento puede ser cualquiera (Documentos, una descarga…):
+/// la foto no baja más de estos niveles ni mira más entradas que estas.
+const SNAPSHOT_MAX_DEPTH: usize = 8;
+const SNAPSHOT_MAX_ENTRIES: usize = 50_000;
 /// Memoria total del punto de restauración.
 const SNAPSHOT_MAX_TOTAL: u64 = 64 * 1024 * 1024;
 
-/// Qué agente lanzar. `custom` lleva su orden completa.
+/// Qué agente lanzar: uno de los cuatro reconocidos. No hay agente «a medida» con una orden libre:
+/// una app que muestra documentos de terceros no debe aceptar una orden arbitraria recibida por IPC:
+/// sería ejecución de código si algún día se colara una inyección en la interfaz.
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct AgentSpec {
     pub id: String,
-    #[serde(default)]
-    pub command: Option<String>,
 }
 
-/// Programa y argumentos para lanzar un agente reconocido (RF-91.1).
+/// Programa y argumentos para lanzar un agente reconocido.
 pub fn agent_command(spec: &AgentSpec) -> Result<(PathBuf, Vec<String>), AiError> {
     let need = |name: &str| which(name).ok_or_else(|| AiError::Config(format!("no se encuentra «{name}» en el PATH")));
     let (program, args): (PathBuf, Vec<String>) = match spec.id.as_str() {
@@ -63,46 +69,11 @@ pub fn agent_command(spec: &AgentSpec) -> Result<(PathBuf, Vec<String>), AiError
         "codex" => (need("npx")?, vec!["-y".into(), CODEX_ADAPTER.into()]),
         "gemini" => (need("gemini")?, vec!["--experimental-acp".into()]),
         "copilot" => (need("copilot")?, vec!["--acp".into()]),
-        "custom" => {
-            let words = split_command(spec.command.as_deref().unwrap_or_default());
-            let (first, rest) = words.split_first().ok_or_else(|| AiError::Config("falta la orden del agente".into()))?;
-            let program = which(first).unwrap_or_else(|| PathBuf::from(first));
-            (program, rest.to_vec())
-        }
         other => return Err(AiError::Config(format!("agente desconocido: {other}"))),
     };
     let (program, mut prefix) = launcher(&program);
     prefix.extend(args);
     Ok((program, prefix))
-}
-
-/// Parte una orden en palabras, respetando comillas dobles y simples.
-pub fn split_command(command: &str) -> Vec<String> {
-    let mut words = Vec::new();
-    let mut current = String::new();
-    let mut quote: Option<char> = None;
-    let mut started = false;
-    for c in command.chars() {
-        match (quote, c) {
-            (Some(q), c) if c == q => quote = None,
-            (Some(_), c) => current.push(c),
-            (None, '"' | '\'') => {
-                quote = Some(c);
-                started = true;
-            }
-            (None, c) if c.is_whitespace() => {
-                if started || !current.is_empty() {
-                    words.push(std::mem::take(&mut current));
-                    started = false;
-                }
-            }
-            (None, c) => current.push(c),
-        }
-    }
-    if started || !current.is_empty() {
-        words.push(current);
-    }
-    words
 }
 
 type Pending = Arc<Mutex<HashMap<u64, oneshot::Sender<Result<Value, Value>>>>>;
@@ -117,8 +88,28 @@ struct Running {
 
 impl Drop for Running {
     fn drop(&mut self) {
-        let _ = self.child.kill();
+        kill_tree(&mut self.child);
     }
+}
+
+/// Mata al agente Y a todo lo que lanzó (`npx` → `node` → el servidor MCP de la app…). `Child::kill` solo alcanza al hijo
+/// directo: los nietos quedaban vivos y uno bloqueaba el ejecutable de debug al volver a compilar.
+fn kill_tree(child: &mut Child) {
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+        let _ = Command::new("taskkill").args(["/PID", &child.id().to_string(), "/T", "/F"]).creation_flags(CREATE_NO_WINDOW).output();
+    }
+    #[cfg(unix)]
+    {
+        // El agente se lanzó como líder de su propio grupo (`process_group(0)`): `-PID` es todo el grupo. La forma
+        // `kill -TERM -PID` NO sirve: el `kill` de procps la interpreta de otro modo y mata la SESIÓN entera (en la CI de
+        // Linux se llevó por delante el propio job de pruebas). Con `-s TERM -- -PID` solo cae el grupo, y si el hijo no
+        // fuera líder de su grupo da «No such process» sin tocar nada más.
+        let _ = Command::new("kill").args(["-s", "TERM", "--", &format!("-{}", child.id())]).output();
+    }
+    let _ = child.kill();
 }
 
 /// Estado del agente por ACP gestionado por Tauri (uno a la vez).
@@ -183,12 +174,14 @@ pub type Sink = Arc<dyn Fn(&str, Value) + Send + Sync>;
 
 /// Lanza `program args` en `cwd` y empieza a leer su salida.
 fn spawn_agent(program: &Path, args: &[String], cwd: &str, sink: Sink) -> Result<Running, AiError> {
-    let mut child = Command::new(program)
-        .args(args)
-        .current_dir(cwd)
-        .stdin(Stdio::piped())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
+    let mut command = Command::new(program);
+    command.args(args).current_dir(cwd).stdin(Stdio::piped()).stdout(Stdio::piped()).stderr(Stdio::piped());
+    #[cfg(unix)]
+    {
+        use std::os::unix::process::CommandExt;
+        command.process_group(0);
+    }
+    let mut child = command
         .spawn()
         .map_err(|error| AiError::Config(format!("no se pudo lanzar el agente ({}): {error}", program.display())))?;
     let stdin = Arc::new(Mutex::new(child.stdin.take().ok_or_else(|| AiError::Server("sin entrada estándar".into()))?));
@@ -313,13 +306,8 @@ pub fn acp_stop(state: State<'_, AcpState>) {
     *lock(&state.snapshot) = None;
 }
 
-#[tauri::command]
-pub fn acp_running(state: State<'_, AcpState>) -> bool {
-    lock(&state.running).is_some()
-}
-
 // ---------------------------------------------------------------------------
-// Punto de restauración por turno (RF-91.6)
+// Punto de restauración por turno
 // ---------------------------------------------------------------------------
 
 /// ¿Parece texto? Sin NUL en los primeros bytes y UTF-8 válido.
@@ -335,19 +323,26 @@ fn read_text(path: &Path) -> Option<String> {
     String::from_utf8(bytes).ok()
 }
 
-/// Foto del proyecto: TODOS sus ficheros (sin carpetas ocultas), con el
-/// contenido de los de texto mientras quepa en los topes, y `None` para los
-/// demás. Saber que un fichero existía, aunque no se guarde su contenido,
-/// evita tomarlo después por «creado por el agente» (y que Deshacer lo borre).
+/// Foto de la carpeta del documento: sus ficheros de texto (sin carpetas ocultas
+/// ni dependencias), con el contenido mientras quepa en los topes, y `None` para
+/// los que no caben. Saber que un fichero existía, aunque no se guarde su
+/// contenido, evita tomarlo después por «creado por el agente» (y que Deshacer
+/// lo borre). Solo se vigilan los `.md`/`.markdown`/`.txt`.
 pub type Snapshot = HashMap<String, Option<String>>;
 
 pub fn snapshot_dir(root: &Path) -> Snapshot {
     let mut files = Snapshot::new();
     let mut captured = 0usize;
     let mut total = 0u64;
-    let walker = walkdir::WalkDir::new(root).into_iter().filter_entry(|entry| entry.depth() == 0 || !entry.file_name().to_string_lossy().starts_with('.'));
-    for entry in walker.flatten() {
-        if !entry.file_type().is_file() {
+    let walker = walkdir::WalkDir::new(root)
+        .max_depth(SNAPSHOT_MAX_DEPTH)
+        .into_iter()
+        .filter_entry(|entry| entry.depth() == 0 || !is_skipped_dir(&entry.file_name().to_string_lossy()));
+    for (visited, entry) in walker.flatten().enumerate() {
+        if visited >= SNAPSHOT_MAX_ENTRIES {
+            break;
+        }
+        if !entry.file_type().is_file() || !is_text_document(entry.path()) {
             continue;
         }
         let Ok(relative) = entry.path().strip_prefix(root) else { continue };
@@ -418,13 +413,6 @@ mod tests {
     use super::*;
 
     #[test]
-    fn parte_ordenes_con_comillas() {
-        assert_eq!(split_command(r#"npx -y "@scope/pkg" --flag 'a b'"#), vec!["npx", "-y", "@scope/pkg", "--flag", "a b"]);
-        assert_eq!(split_command("  "), Vec::<String>::new());
-        assert_eq!(split_command(r#"x """#), vec!["x", ""]);
-    }
-
-    #[test]
     fn clasifica_respuestas_peticiones_y_notificaciones() {
         assert!(matches!(classify(r#"{"jsonrpc":"2.0","id":3,"result":{"stopReason":"end_turn"}}"#), Incoming::Response { id: 3, result: Ok(_) }));
         assert!(matches!(classify(r#"{"jsonrpc":"2.0","id":4,"error":{"message":"x"}}"#), Incoming::Response { id: 4, result: Err(_) }));
@@ -438,26 +426,29 @@ mod tests {
     #[test]
     fn el_punto_de_restauracion_detecta_cambios_creaciones_y_borrados() {
         let dir = tempfile::tempdir().unwrap();
-        std::fs::write(dir.path().join("main.typ"), "= Hola").unwrap();
-        std::fs::write(dir.path().join("viejo.typ"), "x").unwrap();
+        std::fs::write(dir.path().join("main.md"), "# Hola").unwrap();
+        std::fs::write(dir.path().join("viejo.md"), "x").unwrap();
         std::fs::create_dir(dir.path().join(".git")).unwrap();
         std::fs::write(dir.path().join(".git").join("HEAD"), "ref").unwrap();
+        std::fs::write(dir.path().join("raro.md"), [0u8, 1, 2, 0]).unwrap();
+        // Solo se vigilan los documentos de texto: una imagen ni consta.
         std::fs::write(dir.path().join("foto.png"), [0u8, 1, 2, 0]).unwrap();
         let before = snapshot_dir(dir.path());
-        assert_eq!(before.len(), 3, "sin .git: {before:?}");
-        assert_eq!(before["foto.png"], None, "un binario consta, sin contenido");
+        assert_eq!(before.len(), 3, "sin .git ni imágenes: {before:?}");
+        assert_eq!(before["raro.md"], None, "un .md binario consta, sin contenido");
+        assert!(!before.contains_key("foto.png"));
 
-        std::fs::write(dir.path().join("main.typ"), "= Hola mundo").unwrap();
-        std::fs::remove_file(dir.path().join("viejo.typ")).unwrap();
+        std::fs::write(dir.path().join("main.md"), "# Hola mundo").unwrap();
+        std::fs::remove_file(dir.path().join("viejo.md")).unwrap();
         std::fs::create_dir(dir.path().join("caps")).unwrap();
-        std::fs::write(dir.path().join("caps").join("uno.typ"), "= Uno").unwrap();
+        std::fs::write(dir.path().join("caps").join("uno.md"), "# Uno").unwrap();
         let changes = diff_snapshots(&before, &snapshot_dir(dir.path()));
         assert_eq!(
             changes,
             vec![
-                DiskChange { path: "caps/uno.typ".into(), before: None, after: Some("= Uno".into()) },
-                DiskChange { path: "main.typ".into(), before: Some("= Hola".into()), after: Some("= Hola mundo".into()) },
-                DiskChange { path: "viejo.typ".into(), before: Some("x".into()), after: None },
+                DiskChange { path: "caps/uno.md".into(), before: None, after: Some("# Uno".into()) },
+                DiskChange { path: "main.md".into(), before: Some("# Hola".into()), after: Some("# Hola mundo".into()) },
+                DiskChange { path: "viejo.md".into(), before: Some("x".into()), after: None },
             ]
         );
     }
@@ -468,15 +459,16 @@ mod tests {
         before.insert("grande.csv".into(), None);
         let mut after = Snapshot::new();
         after.insert("grande.csv".into(), Some("a,b".into()));
-        after.insert("nuevo.typ".into(), Some("= Nuevo".into()));
+        after.insert("nuevo.md".into(), Some("# Nuevo".into()));
         let changes = diff_snapshots(&before, &after);
-        assert_eq!(changes, vec![DiskChange { path: "nuevo.typ".into(), before: None, after: Some("= Nuevo".into()) }]);
+        assert_eq!(changes, vec![DiskChange { path: "nuevo.md".into(), before: None, after: Some("# Nuevo".into()) }]);
     }
 
     #[test]
-    fn un_agente_desconocido_o_sin_orden_es_un_error_claro() {
-        assert!(agent_command(&AgentSpec { id: "nada".into(), command: None }).is_err());
-        assert!(agent_command(&AgentSpec { id: "custom".into(), command: Some("  ".into()) }).is_err());
+    fn un_agente_desconocido_o_a_medida_es_un_error_claro() {
+        assert!(agent_command(&AgentSpec { id: "nada".into() }).is_err());
+        // No existe el agente «custom» con una orden libre: es ejecución arbitraria por IPC.
+        assert!(agent_command(&AgentSpec { id: "custom".into() }).is_err());
     }
 
     /// Agente falso en Node (`tests/fixtures/fake-acp-agent.mjs`): responde a
@@ -490,7 +482,7 @@ mod tests {
         };
         let script = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests").join("fixtures").join("fake-acp-agent.mjs");
         let dir = tempfile::tempdir().unwrap();
-        std::fs::write(dir.path().join("main.typ"), "= Hola").unwrap();
+        std::fs::write(dir.path().join("main.md"), "# Hola").unwrap();
         let (tx, rx) = std::sync::mpsc::channel::<(String, Value)>();
         let sink: Sink = Arc::new(move |event, payload| {
             let _ = tx.send((event.to_string(), payload));
@@ -512,14 +504,37 @@ mod tests {
         // Luego lee un fichero a través del cliente.
         let (_, read) = rx.recv_timeout(std::time::Duration::from_secs(20)).unwrap();
         assert_eq!(read["method"], "fs/read_text_file");
-        write_line(&running.stdin, &response_message(read["id"].clone(), Some(json!({ "content": "= Hola" })), None)).unwrap();
+        write_line(&running.stdin, &response_message(read["id"].clone(), Some(json!({ "content": "# Hola" })), None)).unwrap();
         let (_, update) = rx.recv_timeout(std::time::Duration::from_secs(20)).unwrap();
         assert_eq!(update["kind"], "notification");
         let done = runtime.block_on(await_response(prompt)).unwrap();
         assert_eq!(done["stopReason"], "end_turn");
         // Lo que escribió por su cuenta aparece frente al punto de restauración.
         let changes = diff_snapshots(&before, &snapshot_dir(dir.path()));
-        assert_eq!(changes, vec![DiskChange { path: "main.typ".into(), before: Some("= Hola".into()), after: Some("= Hola, agente".into()) }]);
+        assert_eq!(changes, vec![DiskChange { path: "main.md".into(), before: Some("# Hola".into()), after: Some("# Hola, agente".into()) }]);
         drop(running);
+    }
+
+    /// El agente (y lo que lance) se termina como un grupo y NO se lleva por delante a quien lo lanzó. Regresión real de la
+    /// 0.14.0: `kill -TERM -PID` mataba la sesión entera y cancelaba la CI de Linux.
+    #[cfg(unix)]
+    #[test]
+    fn cerrar_el_agente_mata_su_grupo_y_no_a_quien_lo_lanzo() {
+        use std::os::unix::process::CommandExt;
+        use std::process::{Command, Stdio};
+        let mut command = Command::new("sh");
+        command.args(["-c", "sleep 60 & wait"]).stdin(Stdio::null()).stdout(Stdio::null()).stderr(Stdio::null());
+        command.process_group(0);
+        let mut child = command.spawn().unwrap();
+        std::thread::sleep(std::time::Duration::from_millis(200));
+        kill_tree(&mut child);
+        let started = std::time::Instant::now();
+        let mut status = None;
+        while status.is_none() && started.elapsed() < std::time::Duration::from_secs(5) {
+            status = child.try_wait().unwrap();
+            std::thread::sleep(std::time::Duration::from_millis(20));
+        }
+        assert!(status.is_some(), "el agente sigue vivo tras cerrarlo");
+        // Si hemos llegado hasta aquí, el proceso de pruebas sigue vivo: la señal no salió del grupo del agente.
     }
 }

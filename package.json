@@ -1,12 +1,17 @@
 {
   "name": "dbv-tauri-starter",
   "private": true,
-  "version": "0.2.0",
+  "version": "0.3.0",
   "type": "module",
   "scripts": {
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "test": "cargo test --manifest-path src-tauri/Cargo.toml --lib",
+    "test:ai": "vitest run",
+    "test:e2e": "node scripts/e2e/run-all.mjs"
   },
   "devDependencies": {
-    "@tauri-apps/cli": "^2"
+    "@tauri-apps/cli": "^2",
+    "jsdom": "^29.1.1",
+    "vitest": "^5.0.5"
   }
 }

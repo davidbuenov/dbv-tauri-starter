@@ -1,26 +1,20 @@
-﻿// =============================================================================
-// dbv-tauri-starter — Puente de internacionalización para el módulo de IA
+// =============================================================================
+// dbv-tauri-starter — Puente de i18n para los módulos de la IA
 // Copyright (c) 2026 David Bueno Vallejo
 // Licensed under the MIT License. See LICENSE for details.
 // Built with dbv-specs-ops · https://github.com/davidbuenov/dbv-specs-ops
 // =============================================================================
+//
+// Los módulos de la IA se cargan de forma perezosa: sus textos llegan
+// con ellos (`translations.js`) y se registran en el diccionario de la app
+// (`src/i18n.js`, vanilla, sin librería). Este fichero es lo único que conoce
+// `window.DBV_I18N`; el resto importa `t` y `getLanguage` de aquí.
 
-export function t(key, vars) {
-  if (typeof window !== 'undefined' && window.dbvI18n?.t) {
-    return window.dbvI18n.t(key, vars);
-  }
-  return key;
-}
+/** Texto traducido (cae al español y, si falta, a la propia clave). */
+export const t = (key, vars) => window.DBV_I18N.t(key, vars);
 
-export function getLanguage() {
-  if (typeof window !== 'undefined' && window.dbvI18n?.getLanguage) {
-    return window.dbvI18n.getLanguage();
-  }
-  return 'es';
-}
+/** Idioma activo de la interfaz: `es` o `en`. */
+export const getLanguage = () => window.DBV_I18N.getLang();
 
-export function registerTranslations(more) {
-  if (typeof window !== 'undefined' && window.dbvI18n?.registerTranslations) {
-    window.dbvI18n.registerTranslations(more);
-  }
-}
+/** Añade las traducciones de la IA al diccionario de la app. */
+export const registerTranslations = (dictionary) => window.DBV_I18N.register(dictionary);
