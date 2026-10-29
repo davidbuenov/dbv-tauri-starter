@@ -14,7 +14,8 @@
 - **Languages:** Rust, JavaScript, HTML, CSS
 - **Technologies / Stack:** Tauri v2 (WebView nativo del SO), Vanilla JS/HTML/CSS sin bundler
 - **Agent Readiness (Web):** Not Applicable
-- **Framework Version:** 2.8.0
+- **Framework Version:** 3.2.0
+- **Desktop AI Assistant (Local/Cloud/ACP):** Yes
 
 
 ---

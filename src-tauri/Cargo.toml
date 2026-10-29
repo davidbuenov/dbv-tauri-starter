@@ -1,6 +1,6 @@
 [package]
 name = "dbv-tauri-starter"
-version = "0.3.0"
+version = "0.4.0"
 description = "dbv-tauri-starter — Tauri v2 + dbv-specs-ops starter template"
 authors = ["David Bueno Vallejo"]
 edition = "2021"

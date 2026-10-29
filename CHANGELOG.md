@@ -13,6 +13,34 @@ el prefijo `template-v` en los tags de git (`template-vX.Y.Z`) — deliberadamen
 
 ---
 
+## [template-v0.4.0] — 2026-10-29
+
+### Changed — el starter es la implementación de referencia de la conexión a IAs de todas las apps DBV
+
+Probado de punta a punta en la app real, agente por agente (Claude Code, Codex, Google Antigravity, GitHub Copilot CLI y Ollama). La base vino de `dbv-unreal-ai` 0.2.2 (categorías, ⚙️ modelo y razonamiento consultados al propio CLI, resumen junto al agente); lo que no funcionaba se ha arreglado aquí.
+
+- **Google Antigravity:** la CLI `agy` no habla ACP (no tiene `--acp`). Se conecta con su servidor oficial `agy_acp_server`, del registro ACP, que se busca en `%LOCALAPPDATA%\agy\acp-server` (Windows) o `~/.local/share/agy-acp-server`; si solo está `agy`, el asistente lo dice y enlaza a la guía.
+- **Inicio de sesión ACP:** si el agente responde *Authentication required*, la app le pide `authenticate` con su método habitual (*Log in with Google*, *Login with ChatGPT*) y reintenta; el panel avisa de que puede abrirse el navegador.
+- **Codex:** el adaptador pasa a `@agentclientprotocol/codex-acp` (el de `@zed-industries` se quedó en la 0.16.0 y respondía *Internal error* con los modelos actuales); modelo y razonamiento van en `CODEX_CONFIG` en vez de flags `-c`.
+- **GitHub Copilot:** el `copilot` que VS Code pone en el `PATH` es solo un lanzador; se prefiere la CLI de verdad y el lanzador solo cuenta si responde a `--version`.
+- **Guía de conexión de IAs dentro de la app** (`src/ai/guide.js`): la misma de `docs/IA.md`, sin conexión, con enlaces internos, botón *Copiar* en cada bloque de órdenes y salto a la sección desde *Cómo instalarlo* (Antigravity, Copilot). Antes, «Ver guía de ayuda» no hacía nada.
+- **Guía común a todas las apps:** `docs/IA.md` / `docs/IA.en.md` se generan desde la plantilla de `dbv-specs-ops` 3.2.0 hasta la marca `dbv-ia:fin-guia-comun`; debajo, lo propio del starter.
+- **`scripts/sync-ai.mjs`:** comprueba (`--check`) o propaga (`--apply`) a otra app los ficheros canónicos de la IA y su guía, y avisa con `[REVISAR]` de lo que esa app adapta a mano (traducciones, comandos de `lib.rs`, `appInfo.js`, puente de `aiApp.js`, estilos).
+- **Aspecto de escritorio** como las apps DBV: fuente del sistema a 13 px, controles compactos, tokens comunes con `ai.css`, paleta oscura de `dbv-unreal-ai`; la barra de contexto del panel ya no se corta.
+- **Framework** `dbv-specs-ops` 2.8.0 → **3.2.0** (`git subtree`), y `AGENTS.md` en la raíz.
+- **Logo de DBV** como icono de la app (fuente en `src-tauri/icons/source/`).
+
+### Fixed
+
+- **Ventana en blanco con `npm run tauri dev`:** `src/index.html` empezaba con un BOM UTF-8 y el servidor de desarrollo de Tauri lo servía como `application/octet-stream` (WebView2 lo trataba como una descarga). Venía de la 0.3.0.
+- Los ficheros canónicos de la IA ya no citan requisitos de otras apps (`REQ-xx` de `dbv-unreal-ai`).
+
+### Tests
+
+- 176 de Vitest (guía, inicio de sesión ACP, Copilot y Antigravity en el asistente), 78 de Rust y el banco e2e.
+
+---
+
 ## [template-v0.3.0] — 2026-10-19
 
 ### Changed — la IA del starter pasa a ser la real de `dbv-md-reader` 0.18.0 (antes: esqueleto)

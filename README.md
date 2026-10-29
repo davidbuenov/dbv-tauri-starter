@@ -1,8 +1,45 @@
-﻿# dbv-tauri-starter
+<p align="center"><img src="src-tauri/icons/source/logo-dbv-dark.png" alt="DBV — David Bueno Tecnología" width="128" height="128"></p>
 
-> *Punto de partida para convertir cualquier idea (o app web existente) en una aplicación de escritorio nativa multiplataforma — con el framework de ingeniería [dbv-specs-ops](https://github.com/davidbuenov/dbv-specs-ops) ya integrado.*
+# dbv-tauri-starter
 
-Plantilla de proyecto: **Tauri v2 + WebView nativo del sistema (WebView2/WebKitGTK/WKWebView) + Vanilla JS**, con `dbv-specs-ops` vendorizado en `dbv-specs-ops/` vía `git subtree` y activado para Claude Code, Copilot, Gemini CLI, Antigravity y Windsurf.
+[![Release template-v0.4.0](https://img.shields.io/badge/Release-template--v0.4.0-2ea44f?style=flat&logo=github&logoColor=white)](https://github.com/davidbuenov/dbv-tauri-starter/releases)
+[![License MIT](https://img.shields.io/badge/License-MIT-green.svg?style=flat)](./LICENSE)
+[![Windows](https://img.shields.io/badge/Windows-10_%2F_11_(WebView2)-0078D7?style=flat&logo=windows&logoColor=white)](./dbv-specs-ops/docs/NATIVE_APPS_RELEASE_CI.md)
+[![macOS](https://img.shields.io/badge/macOS-Universal_(.dmg)-000000?style=flat&logo=apple&logoColor=white)](./dbv-specs-ops/docs/NATIVE_APPS_RELEASE_CI.md)
+[![Linux](https://img.shields.io/badge/Linux-AppImage_%7C_.deb-E95420?style=flat&logo=linux&logoColor=white)](./dbv-specs-ops/docs/NATIVE_APPS_RELEASE_CI.md)
+[![Rust](https://img.shields.io/badge/Rust-1.80+-b7410e?style=flat&logo=rust&logoColor=white)](https://www.rust-lang.org)
+[![Tauri v2](https://img.shields.io/badge/Tauri-v2-FFC131?style=flat&logo=tauri&logoColor=black)](https://v2.tauri.app)
+[![JavaScript](https://img.shields.io/badge/JavaScript-Vanilla_(sin_bundler)-F7DF1E?style=flat&logo=javascript&logoColor=black)](https://developer.mozilla.org/docs/Web/JavaScript)
+[![IA](https://img.shields.io/badge/IA-Local_%7C_API_%7C_Suscripción-8250df?style=flat&logo=openai&logoColor=white)](./docs/IA.md)
+[![ACP](https://img.shields.io/badge/ACP-Agent_Client_Protocol-1A1A1A?style=flat&logoColor=white)](https://agentclientprotocol.com)
+[![Vitest](https://img.shields.io/badge/Vitest-tests-6E9F18?style=flat&logo=vitest&logoColor=white)](https://vitest.dev)
+[![framework](https://img.shields.io/badge/framework-dbv--specs--ops_3.2.0-24292e?style=flat&logo=github&logoColor=white)](https://github.com/davidbuenov/dbv-specs-ops)
+
+> *Punto de partida para convertir cualquier idea (o app web existente) en una aplicación de escritorio nativa multiplataforma — con el framework de ingeniería [dbv-specs-ops](https://github.com/davidbuenov/dbv-specs-ops) ya integrado y una IA opcional lista para usar.*
+
+Plantilla de proyecto: **Tauri v2 + WebView nativo del sistema (WebView2/WebKitGTK/WKWebView) + Vanilla JS**, con `dbv-specs-ops` vendorizado en `dbv-specs-ops/` vía `git subtree` y activado para Claude Code, Codex, Copilot, Gemini CLI, Antigravity y Windsurf.
+
+## 🤖 IA integrada (opcional)
+
+La plantilla trae la **misma conexión a IAs que todas las apps DBV**: una IA local (Ollama, LM Studio o tu propio servidor), un modelo en la nube con tu clave de API (guardada en el almacén de credenciales del sistema) o **tu suscripción** a través del agente instalado (Claude Code, Codex, Gemini CLI, Google Antigravity, GitHub Copilot CLI), sin pagar tokens aparte. Sin ninguna IA conectada no se carga ni un fichero de IA.
+
+<p align="center"><img src="docs/assets/demoseleccionIA.gif" alt="Conectar una IA: detección de lo instalado, agentes por suscripción y elección de modelo y razonamiento" width="820"></p>
+
+*Conectar una IA en una app DBV (aquí, DBV Unreal AI): detecta lo que tienes instalado, conecta el agente y eliges modelo y nivel de razonamiento con ⚙️.*
+
+Cómo conectar cada IA, paso a paso: [**docs/IA.md**](./docs/IA.md) · [English](./docs/IA.en.md). La misma guía se abre **dentro de la app**, sin conexión, desde *Conectar una IA*.
+
+## 🧰 Tecnologías
+
+| Capa | Tecnología |
+| --- | --- |
+| Escritorio | [Tauri v2](https://v2.tauri.app) con el WebView del sistema (WebView2 en Windows, WKWebView en macOS, WebKitGTK en Linux) |
+| Backend | Rust: comandos de Tauri, ficheros confinados, `keyring` (almacén de credenciales del SO), `ureq` (HTTP a los proveedores), `tokio` |
+| Frontend | HTML, CSS y JavaScript sin bundler (scripts clásicos con IIFE); la IA, módulos ES cargados bajo demanda |
+| IA | Ollama, LM Studio y servidores compatibles con OpenAI · Anthropic, OpenAI, Gemini, OpenRouter · agentes por [ACP](https://agentclientprotocol.com) |
+| Pruebas | `cargo test`, [Vitest](https://vitest.dev) + jsdom y un banco de interfaz en Edge/Chromium por CDP |
+| CI/CD | GitHub Actions: instaladores para Windows, macOS y Linux al subir un tag `vX.Y.Z` |
+| Método | [dbv-specs-ops](https://github.com/davidbuenov/dbv-specs-ops) (Spec-Driven Development) |
 
 Nace del conocimiento real extraído de [dbv-md-reader](https://github.com/davidbuenov/dbv-md-reader), llevado hasta publicación en Microsoft Store y Uptodown — ese conocimiento vive ahora generalizado en el propio framework: [`dbv-specs-ops/docs/NATIVE_DESKTOP_APPS.md`](./dbv-specs-ops/docs/NATIVE_DESKTOP_APPS.md), [`NATIVE_APPS_RELEASE_CI.md`](./dbv-specs-ops/docs/NATIVE_APPS_RELEASE_CI.md) y [`MARKETPLACE_PUBLISHING.md`](./dbv-specs-ops/docs/MARKETPLACE_PUBLISHING.md).
 
@@ -125,7 +162,9 @@ comando al backend Rust, y cómo se conectan (con enlaces a la documentación of
 | --- | --- |
 | `src/`, `src-tauri/` | Scaffold mínimo de Tauri v2 (`create-tauri-app`, template vanilla) — un "Hola Mundo" que compila y arranca tal cual |
 | `dbv-specs-ops/` | Framework SDD completo, vendorizado vía `git subtree` desde [davidbuenov/dbv-specs-ops](https://github.com/davidbuenov/dbv-specs-ops) |
-| `CLAUDE.md`, `GEMINI.md`, `ANTIGRAVITY.md`, `.windsurfrules`, `.github/copilot-instructions.md` | Ficheros de activación por plataforma IA, ya apuntando a `dbv-specs-ops/` |
+| `CLAUDE.md`, `AGENTS.md`, `GEMINI.md`, `ANTIGRAVITY.md`, `.windsurfrules`, `.github/copilot-instructions.md` | Ficheros de activación por plataforma IA, ya apuntando a `dbv-specs-ops/` |
+| `src/ai/`, `src-tauri/src/ai/` | La IA opcional: conexiones, agentes por ACP, panel, revisión de cambios y la guía dentro de la app ([docs/IA.md](./docs/IA.md), sección «Para quien construye una app con esta plantilla») |
+| `scripts/sync-ai.mjs` | Mantiene igual la conexión a IAs y su guía en todas las apps DBV que la usan (`--check` / `--apply`) |
 | `.github/workflows/sync-dbv-specs-ops.yml` | Action periódica que trae lo último de `dbv-specs-ops` y abre un PR si hay cambios |
 | [`MIGRATION_PROMPT.md`](./MIGRATION_PROMPT.md) | Prompt ejecutable de 9 fases para que una IA añada escritorio nativo a **una app web que ya existe**, trabajando en el repo de esa app |
 | [`TAURI_TUTORIAL.md`](./TAURI_TUTORIAL.md) | Tutorial de 10 minutos usando la propia demo como ejemplo |
