@@ -109,6 +109,10 @@ pub struct Connection {
     /// rápido, y es lo que ya hacían las conexiones anteriores a la 0.13.1.
     #[serde(default)]
     pub reasoning: Option<bool>,
+    /// Nivel de esfuerzo de razonamiento / pensamiento para agentes CLI
+    /// ("off", "low", "medium", "high").
+    #[serde(default)]
+    pub reasoning_effort: Option<String>,
     /// Máximo de tokens que el modelo puede generar en una respuesta.
     /// `None` = el de su proveedor (`default_max_output`).
     #[serde(default)]
@@ -139,7 +143,7 @@ impl Connection {
     pub fn validate(&self) -> Result<(), AiError> {
         let url = self.base_url.trim();
         if self.provider == ProviderKind::Agent {
-            let known = ["acp:claude", "acp:gemini", "acp:codex", "acp:copilot", "acp:custom"];
+            let known = ["acp:claude", "acp:gemini", "acp:codex", "acp:copilot", "acp:antigravity", "acp:agy", "acp:custom"];
             if !known.contains(&url) {
                 return Err(AiError::Config(format!("agente no reconocido ({url})")));
             }
@@ -209,6 +213,7 @@ mod tests {
             supports_tools: Some(true),
             supports_images: Some(true),
             reasoning: None,
+            reasoning_effort: None,
             max_output_tokens: None,
         }
     }
@@ -287,6 +292,8 @@ mod tests {
         connection.id = "a1".into();
         connection.provider = ProviderKind::Agent;
         connection.base_url = "acp:claude".into();
+        assert!(connection.validate().is_ok());
+        connection.base_url = "acp:antigravity".into();
         assert!(connection.validate().is_ok());
         connection.base_url = "acp:../../x".into();
         assert!(connection.validate().is_err());

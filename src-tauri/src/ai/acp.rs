@@ -37,9 +37,10 @@ use super::detect::{launcher, which};
 use super::files::{is_skipped_dir, is_text_document};
 use super::AiError;
 
-/// Paquetes de npm de los adaptadores ACP (comprobados en npm el 2026-10-02).
+/// Paquetes de npm de los adaptadores ACP (los del registro ACP, comprobados el 2026-10-29: el de Codex
+/// se mudó de `@zed-industries/codex-acp`, parado en la 0.16.0, a `@agentclientprotocol/codex-acp`).
 pub const CLAUDE_ADAPTER: &str = "@agentclientprotocol/claude-agent-acp";
-pub const CODEX_ADAPTER: &str = "@zed-industries/codex-acp";
+pub const CODEX_ADAPTER: &str = "@agentclientprotocol/codex-acp";
 
 /// Tamaño máximo de un fichero del punto de restauración (los .md son pequeños;
 /// uno enorme no se vigila).
@@ -59,21 +60,122 @@ const SNAPSHOT_MAX_TOTAL: u64 = 64 * 1024 * 1024;
 #[serde(rename_all = "camelCase")]
 pub struct AgentSpec {
     pub id: String,
+    #[serde(default)]
+    pub model: Option<String>,
+    #[serde(default)]
+    pub reasoning_effort: Option<String>,
+}
+
+impl AgentSpec {
+    pub fn new(id: impl Into<String>) -> Self {
+        Self {
+            id: id.into(),
+            model: None,
+            reasoning_effort: None,
+        }
+    }
 }
 
 /// Programa y argumentos para lanzar un agente reconocido.
 pub fn agent_command(spec: &AgentSpec) -> Result<(PathBuf, Vec<String>), AiError> {
     let need = |name: &str| which(name).ok_or_else(|| AiError::Config(format!("no se encuentra «{name}» en el PATH")));
-    let (program, args): (PathBuf, Vec<String>) = match spec.id.as_str() {
+    let (program, mut args): (PathBuf, Vec<String>) = match spec.id.as_str() {
         "claude" => (need("npx")?, vec!["-y".into(), CLAUDE_ADAPTER.into()]),
         "codex" => (need("npx")?, vec!["-y".into(), CODEX_ADAPTER.into()]),
-        "gemini" => (need("gemini")?, vec!["--experimental-acp".into()]),
+        // `--acp` es el flag actual (registro ACP, Gemini CLI 0.65); `--experimental-acp` era el de las primeras versiones.
+        "gemini" => (need("gemini")?, vec!["--acp".into()]),
+        // Antigravity: la CLI `agy` no habla ACP (no tiene `--acp`); lo hace su servidor `agy_acp_server`,
+        // que se instala aparte desde el registro ACP. En Linux el registro lo lanza con `--uid=`.
+        "antigravity" | "agy" => (
+            which("agy_acp_server").ok_or_else(|| {
+                AiError::Config("Antigravity necesita su servidor ACP «agy_acp_server» (registro ACP): la CLI «agy» no habla ACP".into())
+            })?,
+            if cfg!(target_os = "linux") { vec!["--uid=".into()] } else { Vec::new() },
+        ),
         "copilot" => (need("copilot")?, vec!["--acp".into()]),
         other => return Err(AiError::Config(format!("agente desconocido: {other}"))),
     };
+
+    let clean_model = spec
+        .model
+        .as_deref()
+        .map(str::trim)
+        .filter(|m| !m.is_empty() && *m != spec.id && *m != "antigravity" && *m != "agy");
+
+    match spec.id.as_str() {
+        "claude" => {
+            // @agentclientprotocol/claude-agent-acp recibe el modelo y el esfuerzo por variable de entorno y session/set_config_option.
+        }
+        "codex" | "antigravity" | "agy" => {
+            // Sin flags: un flag desconocido hace que el adaptador imprima la ayuda y termine. El modelo
+            // llega por entorno (`agent_env`) y por `session/set_config_option`.
+        }
+        _ => {
+            if let Some(model) = clean_model {
+                args.push("--model".into());
+                args.push(model.into());
+            }
+        }
+    }
+
     let (program, mut prefix) = launcher(&program);
     prefix.extend(args);
     Ok((program, prefix))
+}
+
+/// Variables de entorno adicionales para configurar el modelo y esfuerzo al lanzar el agente ACP.
+pub fn agent_env(spec: &AgentSpec) -> Vec<(String, String)> {
+    let mut envs = Vec::new();
+    let clean_model = spec
+        .model
+        .as_deref()
+        .map(str::trim)
+        .filter(|m| !m.is_empty() && *m != spec.id && *m != "antigravity" && *m != "agy");
+    let clean_effort = spec
+        .reasoning_effort
+        .as_deref()
+        .map(str::trim)
+        .filter(|e| !e.is_empty() && *e != "off");
+
+    match spec.id.as_str() {
+        "claude" => {
+            if let Some(model) = clean_model {
+                envs.push(("ANTHROPIC_MODEL".into(), model.into()));
+            }
+            if spec.reasoning_effort.as_deref() == Some("off") {
+                envs.push(("MAX_THINKING_TOKENS".into(), "0".into()));
+            }
+        }
+        "codex" => {
+            // @agentclientprotocol/codex-acp: `CODEX_CONFIG` es un JSON que se mezcla con la configuración de la sesión.
+            let mut config = serde_json::Map::new();
+            if let Some(model) = clean_model {
+                config.insert("model".into(), json!(model));
+            }
+            if let Some(effort) = clean_effort {
+                config.insert("model_reasoning_effort".into(), json!(effort));
+            }
+            if !config.is_empty() {
+                envs.push(("CODEX_CONFIG".into(), Value::Object(config).to_string()));
+            }
+        }
+        "antigravity" | "agy" => {
+            if let Some(model) = clean_model {
+                let resolved = if let Some(effort) = clean_effort.filter(|e| matches!(*e, "low" | "medium" | "high")) {
+                    if model.ends_with("-low") || model.ends_with("-medium") || model.ends_with("-high") {
+                        model.to_string()
+                    } else {
+                        format!("{model}-{effort}")
+                    }
+                } else {
+                    model.to_string()
+                };
+                envs.push(("AGY_ACP_DEFAULT_MODEL".into(), resolved));
+            }
+        }
+        _ => {}
+    }
+    envs
 }
 
 type Pending = Arc<Mutex<HashMap<u64, oneshot::Sender<Result<Value, Value>>>>>;
@@ -173,9 +275,9 @@ pub fn classify(line: &str) -> Incoming {
 pub type Sink = Arc<dyn Fn(&str, Value) + Send + Sync>;
 
 /// Lanza `program args` en `cwd` y empieza a leer su salida.
-fn spawn_agent(program: &Path, args: &[String], cwd: &str, sink: Sink) -> Result<Running, AiError> {
+fn spawn_agent_with_env(program: &Path, args: &[String], envs: &[(String, String)], cwd: &str, sink: Sink) -> Result<Running, AiError> {
     let mut command = Command::new(program);
-    command.args(args).current_dir(cwd).stdin(Stdio::piped()).stdout(Stdio::piped()).stderr(Stdio::piped());
+    command.args(args).envs(envs.iter().map(|(k, v)| (k.as_str(), v.as_str()))).current_dir(cwd).stdin(Stdio::piped()).stdout(Stdio::piped()).stderr(Stdio::piped());
     #[cfg(unix)]
     {
         use std::os::unix::process::CommandExt;
@@ -265,10 +367,11 @@ fn response_message(id: Value, result: Option<Value>, error: Option<String>) -> 
 pub fn acp_start(app: AppHandle, state: State<'_, AcpState>, spec: AgentSpec, cwd: String) -> Result<(), AiError> {
     *lock(&state.running) = None;
     let (program, args) = agent_command(&spec)?;
+    let envs = agent_env(&spec);
     let sink: Sink = Arc::new(move |event, payload| {
         let _ = app.emit(event, payload);
     });
-    *lock(&state.running) = Some(spawn_agent(&program, &args, &cwd, sink)?);
+    *lock(&state.running) = Some(spawn_agent_with_env(&program, &args, &envs, &cwd, sink)?);
     Ok(())
 }
 
@@ -466,9 +569,54 @@ mod tests {
 
     #[test]
     fn un_agente_desconocido_o_a_medida_es_un_error_claro() {
-        assert!(agent_command(&AgentSpec { id: "nada".into() }).is_err());
+        assert!(agent_command(&AgentSpec::new("nada")).is_err());
         // No existe el agente «custom» con una orden libre: es ejecución arbitraria por IPC.
-        assert!(agent_command(&AgentSpec { id: "custom".into() }).is_err());
+        assert!(agent_command(&AgentSpec::new("custom")).is_err());
+    }
+
+    #[test]
+    fn agent_command_con_modelo_anade_flag() {
+        let spec = AgentSpec {
+            id: "gemini".into(),
+            model: Some("gemini-3.8-flash".into()),
+            reasoning_effort: Some("high".into()),
+        };
+        if let Ok((_bin, args)) = agent_command(&spec) {
+            assert!(args.contains(&"--model".to_string()));
+            assert!(args.contains(&"gemini-3.8-flash".to_string()));
+        }
+        let agy_spec = AgentSpec {
+            id: "antigravity".into(),
+            model: Some("gemini-4-argon".into()),
+            reasoning_effort: Some("medium".into()),
+        };
+        // Antigravity solo se lanza con `agy_acp_server`, sin flags; el modelo va por entorno.
+        match agent_command(&agy_spec) {
+            Ok((_bin, args)) => assert!(!args.iter().any(|a| a == "--acp" || a == "--model" || a == "--effort" || a == "medium")),
+            Err(error) => assert!(error.to_string().contains("agy_acp_server")),
+        }
+        assert_eq!(agent_env(&agy_spec), vec![("AGY_ACP_DEFAULT_MODEL".to_string(), "gemini-4-argon-medium".to_string())]);
+        // Codex: sin flags (el adaptador no documenta `-c`); modelo y esfuerzo van en `CODEX_CONFIG`.
+        let codex_spec = AgentSpec {
+            id: "codex".into(),
+            model: Some("gpt-6-luna".into()),
+            reasoning_effort: Some("high".into()),
+        };
+        if let Ok((_bin, args)) = agent_command(&codex_spec) {
+            assert_eq!(args.last().map(String::as_str), Some(CODEX_ADAPTER));
+        }
+        let env = agent_env(&codex_spec);
+        assert_eq!(env.len(), 1);
+        assert_eq!(env[0].0, "CODEX_CONFIG");
+        let config: Value = serde_json::from_str(&env[0].1).unwrap();
+        assert_eq!(config, json!({ "model": "gpt-6-luna", "model_reasoning_effort": "high" }));
+        assert!(agent_env(&AgentSpec::new("codex")).is_empty());
+        let claude_spec = AgentSpec {
+            id: "claude".into(),
+            model: Some("claude-sonnet-5-5".into()),
+            reasoning_effort: Some("high".into()),
+        };
+        assert_eq!(agent_env(&claude_spec), vec![("ANTHROPIC_MODEL".to_string(), "claude-sonnet-5-5".to_string())]);
     }
 
     /// Agente falso en Node (`tests/fixtures/fake-acp-agent.mjs`): responde a
@@ -487,7 +635,7 @@ mod tests {
         let sink: Sink = Arc::new(move |event, payload| {
             let _ = tx.send((event.to_string(), payload));
         });
-        let running = spawn_agent(&node, &[script.to_string_lossy().to_string()], &dir.path().to_string_lossy(), sink).unwrap();
+        let running = spawn_agent_with_env(&node, &[script.to_string_lossy().to_string()], &[], &dir.path().to_string_lossy(), sink).unwrap();
         let runtime = tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap();
         let init = runtime.block_on(await_response(send_request(&running, "initialize", json!({ "protocolVersion": 1 })).unwrap())).unwrap();
         assert_eq!(init["agentInfo"]["name"], "falso");

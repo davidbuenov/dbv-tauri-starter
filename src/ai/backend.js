@@ -31,14 +31,22 @@ export function on(eventName, handler) {
   return tauri().event.listen(eventName, (event) => handler(event.payload));
 }
 
-/** Abre una dirección en el navegador del sistema. */
-export const openExternalUrl = async (url) => {
+/**
+ * Abre una dirección en el navegador del sistema con el plugin `opener` (el
+ * único cargado: `shell` no existe y `window.open` no hace nada en la WebView).
+ * Fuera de Tauri (navegador de desarrollo) recurre a `window.open`.
+ */
+export async function openExternalUrl(url) {
+  const opener = tauri()?.opener;
+  let result = { ok: true, value: undefined };
   try {
-    await tauri().shell.open(url);
-  } catch {
-    window.open(url, '_blank', 'noopener,noreferrer');
+    if (opener) await opener.openUrl(url);
+    else window.open(url, '_blank', 'noopener,noreferrer');
+  } catch (error) {
+    result = { ok: false, error: normalizeError(error) };
   }
-};
+  return result;
+}
 
 // ─── Conexiones y modelos ────────────────────────────────────────────
 export const aiConnections = () => call('ai_connections');
@@ -50,6 +58,9 @@ export const aiSetPreferences = ({ active, showAi } = {}) => call('ai_set_prefer
 export const aiProviders = () => call('ai_providers');
 export const aiDetect = () => call('ai_detect');
 export const aiListModels = (connection, apiKey) => call('ai_list_models', { connection, apiKey: apiKey ?? null });
+/** Modelos disponibles para un agente CLI específico (antigravity, claude, codex, etc.). */
+export const aiListAgentModels = (agentId, forceRefresh = false) =>
+  call('ai_list_agent_models', { agentId, forceRefresh: Boolean(forceRefresh) });
 /** Tamaño, contexto máximo y capacidades del modelo (solo Ollama; `null` en el resto). */
 export const aiModelInfo = (connection) => call('ai_model_info', { connection });
 /** Lanza una petición; la respuesta llega por el evento `ai-stream` con este `requestId`. */

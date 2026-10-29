@@ -5,7 +5,8 @@
 * **Estado actual**: ENTREGA COMPLETADA (template-v0.2.0). 40 tests en verde, UI funcional con carga perezosa y documentación bilingüe.
 * **Última decisión técnica**: Desacoplamiento total del frontend mediante carga perezosa (`entry.js`), custodia de API keys en llavero del SO vía `keyring` de Rust y soporte ACP para suscripciones existentes sin costes de tokens.
 * **Próximo paso**: Sellar versión en Git con tag `template-v0.2.0`.
-* **Actualización 2026-10-19 (`template-v0.3.0`)**: la IA es ahora la real de `dbv-md-reader` 0.18.0 (ver `CHANGELOG.md` y ADR-035): demo funcional de punta a punta, 154 tests de Vitest + banco e2e + 71 de Rust. **Publicada** (commit, tag `template-v0.3.0` y push). **Pendiente:** probar a mano con Ollama/Claude Code y en Linux/macOS; subir las Lecciones de `dbv-md-reader` (33, 34 y 35) a `dbv-specs-ops`.
+* **Actualización 2026-10-19 (`template-v0.3.0`)**: la IA es ahora la real de `dbv-md-reader` 0.18.0 (ver `CHANGELOG.md` y ADR-035): demo funcional de punta a punta, 154 tests de Vitest + banco e2e + 71 de Rust. **Publicada** (commit, tag `template-v0.3.0` y push).
+* **Actualización 2026-10-29 (`template-v0.4.0` — Fuente Canónica Única de Conexión IA)**: `dbv-tauri-starter` es ahora la **implementación canónica de referencia** del subsistema de conexión a IAs de escritorio para toda la familia DBV (sincronizada desde `dbv-unreal-ai` v0.2.2) e incluye el script oficial `scripts/sync-ai.mjs` (`--check` / `--apply`) para propagar los 9 módulos core de conexión sin divergencias. **77 tests de Rust + 160 tests de Vitest en verde.**
 
 ## Checklist de Tareas
 
@@ -41,9 +42,32 @@
 
 ---
 
+## 📌 Versión Actual (`template-v0.4.0`) — Fuente Canónica Única del Subsistema de Conexión a IAs
+
+- [x] **Sincronización del Subsistema de IA canónico (heredado de `dbv-unreal-ai` v0.2.1 + v0.2.2)**
+  - **Objetivo**: Establecer `dbv-tauri-starter` como la **única fuente de verdad (Single Source of Truth)** del sistema de conexión a IAs para todas las aplicaciones de la familia DBV (`dbv-unreal-ai`, `dbv-typst-editor`, `dbv-md-reader` y futuros proyectos).
+  - **Cambios incorporados y verificados (77 tests Rust + 160 tests Vitest)**:
+    1. **Categorización visual tripartita en UI (`src/ai/connectWizard.js`)**:
+       - 1. IAs Locales (LM Studio, Ollama).
+       - 2. IAs por Suscripción / Agentes CLI vía ACP (Google Antigravity CLI `agy`, Claude Code, Gemini CLI, Codex, Copilot CLI) que conectan cuentas Pro/Plus/Team/One sin coste de tokens.
+       - 3. IAs en la nube por clave de API (Anthropic, OpenAI, Gemini, OpenRouter, compatibles).
+    2. **Descubrimiento dinámico real de modelos y niveles de razonamiento por CLI (`src-tauri/src/ai/detect.rs`, `src-tauri/src/ai/commands.rs`)**:
+       - Consulta en vivo al ejecutable del agente (`agy --help`, JSON-RPC `initialize` a `claude --output-format stream-json`, `codex debug clear-memories --model __probe__`, `copilot --help`) con extracción de modelos reales (p. ej. `gemini-4-argon`, `claude-sonnet-4-6`, `gpt-5.3-codex`, etc.) y niveles de esfuerzo (`low`, `medium`, `high`, `max`).
+       - Caché de sesión en frontend (`src/ai/connectWizard.js`): se consulta automáticamente solo la primera vez por sesión al abrir el asistente o el panel `⚙️`, con botón manual de refresco (`🔄`) para re-interrogar al CLI bajo demanda.
+    3. **Resumen visual estilo Visual Studio (`src/ai/connectWizard.js`, `src/ai/ai.css`)**:
+       - Etiqueta resumen `.ai-agent-model-summary` junto al nombre del agente conectado/activo mostrando de un vistazo el modelo y nivel de razonamiento seleccionados (p. ej. `"Gemini 4 Argon Medium"`, `"Claude Sonnet 4.6 Medium"`).
+    4. **Detección extendida en Windows y propagación ACP (`src-tauri/src/ai/detect.rs`, `src-tauri/src/ai/connections.rs`, `src-tauri/src/ai/acp.rs`)**:
+       - `extended_path()` para añadir rutas de usuario (`LOCALAPPDATA/agy/bin`, etc.) y alias `antigravity` -> `agy.exe`.
+       - Validación de `"acp:antigravity"` y `"acp:agy"` en `Connection::validate()`.
+       - Propagación de `--model <id>` y `--effort <level>` / `-c model_reasoning_effort=<level>` al invocar el subproceso ACP (`spawn_for_agent_with_options`) y en `session/new` (`acpSession.js`).
+    5. **Script de sincronización determinista (`scripts/sync-ai.mjs`)**:
+       - Verifica (`node scripts/sync-ai.mjs --check <ruta-repo>`) o aplica (`node scripts/sync-ai.mjs --apply <ruta-repo>`) los **9 ficheros canónicos 100% agnósticos del dominio** (`detect.rs`, `connections.rs`, `acp.rs`, `commands.rs`, `connectWizard.js`, `acpSession.js`, `backend.js`, `tests/ai/connectWizard.test.js`, `tests/ai/acp.test.js`) preservando la cabecera de copyright del repositorio destino y adaptando automáticamente la ruta de tests en `dbv-typst-editor` (`src/ai/*.test.js`).
+
+---
+
 ## 🔄 Context Snapshot / Snapshot de Contexto
 
-> **Last update / Última actualización:** 2026-10-03
-> **Exact point / Punto exacto:** Ciclo completo de la versión template-v0.2.0 cerrado en `dbv-tauri-starter`.
-> **Pending / Pendiente:** Ninguno para esta versión.
-> **Next step / Próximo paso:** Crear commit y tag `template-v0.2.0` en git.
+> **Last update / Última actualización:** 2026-10-29
+> **Exact point / Punto exacto:** Subsistema canónico de conexión a IAs (`template-v0.4.0`) y `scripts/sync-ai.mjs` completados y verificados en `dbv-tauri-starter` (77 tests Rust + 160 tests Vitest; 9/9 ficheros `[IDÉNTICO]` frente a `dbv-unreal-ai` v0.2.2).
+> **Pending / Pendiente:** Ninguno. Listo para propagar a `dbv-typst-editor` y `dbv-md-reader` mediante `node scripts/sync-ai.mjs --apply`.
+> **Next step / Próximo paso:** Ejecutar `scripts/sync-ai.mjs` cuando se abra el ciclo de actualización en `dbv-typst-editor` y `dbv-md-reader`.

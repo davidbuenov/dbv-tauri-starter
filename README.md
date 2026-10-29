@@ -103,10 +103,15 @@ comando al backend Rust, y cómo se conectan (con enlaces a la documentación of
    añadir uno, comprueba si ya es un gotcha conocido en
    [`NATIVE_DESKTOP_APPS.md` §6](./dbv-specs-ops/docs/NATIVE_DESKTOP_APPS.md) (p. ej. impresión en
    macOS, ventanas creadas dinámicamente).
-4. **Arranca `/spec`** (paso 3 de arriba) para documentar tu app real en
+4. **Icono de la app:** la plantilla trae el logo de DBV. Todos los tamaños (`.ico`, `.icns`,
+   PNG y los de la Microsoft Store) salen de un solo PNG cuadrado con transparencia, guardado en
+   `src-tauri/icons/source/`. Para cambiarlo, pon el tuyo (mejor de 1024×1024) y ejecuta
+   `npx tauri icon src-tauri/icons/source/<tu-logo>.png`. Además de los de escritorio, el comando
+   genera `android/`, `ios/` y `64x64.png`: bórralos si tu app no es móvil.
+5. **Arranca `/spec`** (paso 3 de arriba) para documentar tu app real en
    `dbv-specs-ops/docs/SPECIFICATIONS.md` — no hace falta esperar a haber borrado la demo primero,
    pueden ir en paralelo.
-5. **Cuando quieras publicar un instalador**, los 3 workflows de `.github/workflows/` ya están
+6. **Cuando quieras publicar un instalador**, los 3 workflows de `.github/workflows/` ya están
    listos (`release-windows.yml`/`-linux.yml`/`-macos.yml`) — solo etiqueta `git tag vX.Y.Z` y
    empújalo. Sin firma de código por defecto: lee
    [`MARKETPLACE_PUBLISHING.md`](./dbv-specs-ops/docs/MARKETPLACE_PUBLISHING.md) si necesitas

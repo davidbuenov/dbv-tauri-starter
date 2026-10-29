@@ -725,6 +725,7 @@ export function createAiApp(deps) {
       else if (update.type === 'tool' && update.title) panel.addStep(update.title);
       else if (update.type === 'plan' && update.entries.length) panel.addNote(`${t('ai.agentPlan')}\n${update.entries.map((e) => `${e.status === 'completed' ? '✓' : '·'} ${e.content}`).join('\n')}`);
     },
+    onAuthenticate: (method) => panel.addStep(t('ai.agentSigningIn').replace('{method}', method.name ?? method.id)),
   });
 
   /** Deshace un cambio que el agente hizo en disco. Solo si el fichero sigue como lo dejó el agente. */
@@ -770,7 +771,11 @@ export function createAiApp(deps) {
     agentTurn = { proposal: createProposal(), bubble };
     let finalText = '';
     try {
-      const spec = { id: agentId(connection) };
+      const spec = {
+        id: agentId(connection),
+        model: connection.model || undefined,
+        reasoningEffort: connection.reasoningEffort || undefined,
+      };
       panel.addStep(t('ai.agentStarting').replace('{agent}', providerName(connection)));
       const session = await acp.ensureSession(spec);
       const active = activeSource();

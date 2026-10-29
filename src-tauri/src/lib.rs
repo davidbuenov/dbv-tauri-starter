@@ -1,4 +1,4 @@
-﻿// =============================================================================
+// =============================================================================
 // dbv-tauri-starter — Punto de entrada de la aplicación Tauri
 // Copyright (c) 2026 David Bueno Vallejo
 // Licensed under the MIT License. See LICENSE for details.
@@ -74,6 +74,8 @@ pub fn run() {
             ai::commands::ai_detect,
             #[cfg(desktop)]
             ai::commands::ai_list_models,
+            #[cfg(desktop)]
+            ai::commands::ai_list_agent_models,
             #[cfg(desktop)]
             ai::commands::ai_model_info,
             #[cfg(desktop)]

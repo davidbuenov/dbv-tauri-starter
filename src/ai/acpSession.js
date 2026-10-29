@@ -51,6 +51,15 @@ export function insideProject(root, absolute) {
   return result;
 }
 
+/**
+ * Método de inicio de sesión que se pide al agente cuando `session/new` exige autenticarse: el primero
+ * que anuncia en `initialize` (`authMethods`), que es el habitual de cada agente (p. ej. `oauth-personal`,
+ * «Log in with Google», en Antigravity y Gemini CLI). `null` si no anuncia ninguno.
+ */
+export function pickAuthMethod(methods) {
+  return Array.isArray(methods) && methods[0]?.id ? methods[0] : null;
+}
+
 /** Las líneas `line` (1-indexada) a `line + limit - 1` de `text`. */
 export function sliceLines(text, line, limit) {
   if (!line && !limit) return text;
@@ -67,8 +76,9 @@ export function sliceLines(text, line, limit) {
  * @param {(params: object) => Promise<string|null>} deps.askPermission optionId elegido, o `null` (cancelado).
  * @param {(relative: string, content: string) => Promise<void>} deps.stageWrite
  * @param {(update: object) => void} deps.onUpdate
+ * @param {() => Promise<Array>|Array} [deps.mcpServers] Servidores MCP que recibe el agente en `session/new`.
  */
-export function createAcpSession({ backend, getRoot, readText, askPermission, stageWrite, onUpdate }) {
+export function createAcpSession({ backend, getRoot, readText, askPermission, stageWrite, onUpdate, mcpServers = () => [], onAuthenticate = () => {} }) {
   let spec = null;
   let sessionId = null;
   let root = null;
@@ -117,7 +127,7 @@ export function createAcpSession({ backend, getRoot, readText, askPermission, st
   async function ensureSession(nextSpec) {
     await ensureListener();
     const currentRoot = getRoot();
-    if (sessionId && spec && spec.id === nextSpec.id && spec.command === nextSpec.command && root === currentRoot) return { fresh: false };
+    if (sessionId && spec && spec.id === nextSpec.id && spec.model === nextSpec.model && spec.reasoningEffort === nextSpec.reasoningEffort && spec.command === nextSpec.command && root === currentRoot) return { fresh: false };
     await backend.acpStop();
     const started = await backend.acpStart(nextSpec, currentRoot);
     if (!started.ok) throw Object.assign(new Error(started.error.message), { kind: started.error.kind });
@@ -127,13 +137,37 @@ export function createAcpSession({ backend, getRoot, readText, askPermission, st
       clientInfo: { name: APP_NAME, title: APP_NAME },
     });
     if (!init.ok) throw Object.assign(new Error(init.error.message), { kind: 'network' });
-    // Sin servidor MCP propio (decidido en /spec de la 0.18.0): el agente usa sus propias herramientas
-    // y la app le deja leer y proponer ficheros por el protocolo.
-    const session = await backend.acpRequest('session/new', { cwd: currentRoot, mcpServers: [] });
+    // Servidores MCP para el agente, si el host los da.
+    const servers = await mcpServers();
+    const newSession = () => backend.acpRequest('session/new', { cwd: currentRoot, mcpServers: Array.isArray(servers) ? servers : [] });
+    let session = await newSession();
+    // «Authentication required»: se pide al agente que inicie sesión con su método habitual (puede abrir
+    // el navegador) y se reintenta. La app nunca ve las credenciales: las guarda el agente.
+    const method = pickAuthMethod(init.value?.authMethods);
+    if (!session.ok && method && /auth/i.test(session.error.message)) {
+      onAuthenticate(method);
+      const auth = await backend.acpRequest('authenticate', { methodId: method.id });
+      if (!auth.ok) throw Object.assign(new Error(auth.error.message), { kind: 'auth' });
+      session = await newSession();
+    }
     if (!session.ok) throw Object.assign(new Error(session.error.message), { kind: session.error.kind === 'badRequest' ? 'auth' : session.error.kind });
     spec = nextSpec;
     root = currentRoot;
     sessionId = session.value.sessionId;
+    if (nextSpec.model && nextSpec.model !== nextSpec.id && nextSpec.model !== 'antigravity' && nextSpec.model !== 'agy') {
+      await backend.acpRequest('session/set_config_option', {
+        sessionId,
+        configId: 'model',
+        value: nextSpec.model,
+      });
+    }
+    if (nextSpec.reasoningEffort && nextSpec.reasoningEffort !== 'off') {
+      await backend.acpRequest('session/set_config_option', {
+        sessionId,
+        configId: 'effort',
+        value: nextSpec.reasoningEffort,
+      });
+    }
     return { fresh: true, agentInfo: init.value?.agentInfo ?? null, images: Boolean(init.value?.agentCapabilities?.promptCapabilities?.image) };
   }
 

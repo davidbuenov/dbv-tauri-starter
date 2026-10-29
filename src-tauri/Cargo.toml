@@ -1,4 +1,4 @@
-﻿[package]
+[package]
 name = "dbv-tauri-starter"
 version = "0.3.0"
 description = "dbv-tauri-starter — Tauri v2 + dbv-specs-ops starter template"
