@@ -4,20 +4,72 @@
 
 <p align="right">🇬🇧 English · <a href="./README.md">🇪🇸 Leer en español</a></p>
 
-![Version](https://img.shields.io/badge/version-2.8.0-blue)
+![Version](https://img.shields.io/badge/version-3.2.0-blue)
 ![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)
+
+---
+
+**dbv-specs-ops** is a lightweight engineering system designed to maximize software quality and context persistence in AI-assisted development.
+
+This repository acts as a **master blueprint** that transforms your AI assistant from a simple code generator into a Senior Software Engineer that follows rigorous processes.
+
+---
+
+<a name="start"></a>
+## 🚀 Get Started in a Minute
+
+Open your AI assistant (Claude Code, Codex, Gemini CLI, Copilot, Cursor, Windsurf…) in the folder where you want your project and write:
+
+> **I want to create a project using the dbv-specs-ops framework you can find at github.com/davidbuenov**
+
+The AI downloads the framework into the `dbv-specs-ops/` subfolder, sets up your assistant's activation files and proposes the initial configuration (name, license, stack…) for you to confirm in one go. After that you work in phases: `/spec`, `/plan`, `/build`, `/test`, `/code-simplify` and `/ship`.
+
+| I want to… | Tell the AI |
+|---|---|
+| **Create a new project** | *I want to create a project using the dbv-specs-ops framework you can find at github.com/davidbuenov* |
+| **Add it to a project that already has code** | *I want to adopt the dbv-specs-ops framework (github.com/davidbuenov/dbv-specs-ops) in this existing project* |
+| **Upgrade a project that already uses it** | Save [`UPGRADE_PROMPT.md`](https://raw.githubusercontent.com/davidbuenov/dbv-specs-ops/master/docs/UPGRADE_PROMPT.md) as `dbv-specs-ops/docs/UPGRADE_PROMPT.md` and write: *Read dbv-specs-ops/docs/UPGRADE_PROMPT.md and upgrade my project* ([details](#upgrade)) |
+
+Prefer to do it yourself? See the [manual installation](#manual).
+
+<details>
+<summary>🤖 <b>Instructions for the AI</b> (if a user asked you to use this framework)</summary>
+
+1. **Install the framework in the project's `dbv-specs-ops/` subfolder**, without git history (so there is nothing to delete): create the folder, download the archive and extract it stripping the top-level directory.
+
+   ```bash
+   mkdir dbv-specs-ops
+   curl -L -o dbv-specs-ops.tar.gz https://github.com/davidbuenov/dbv-specs-ops/archive/refs/heads/master.tar.gz
+   tar -xzf dbv-specs-ops.tar.gz --strip-components=1 -C dbv-specs-ops
+   rm dbv-specs-ops.tar.gz
+   ```
+
+   It works the same on macOS, Linux and Windows 10+ (in PowerShell use `curl.exe`). **Do not use `git clone`** unless you cannot download the archive: it would leave a nested `.git` that would have to be deleted. If `dbv-specs-ops/` already exists, the project already uses the framework: offer to upgrade it with `dbv-specs-ops/docs/UPGRADE_PROMPT.md` instead of reinstalling.
+2. **Create the activation files in the project root** that redirect to that subfolder. At least `CLAUDE.md` and `AGENTS.md`, with this content (if they already exist with the user's own content, add these lines at the top and delete nothing):
+
+   ```markdown
+   Please read and follow the master instructions in dbv-specs-ops/docs/MASTER_PROMPT.md. All specs, tasks, and memory logs are located inside the dbv-specs-ops/ folder.
+   ```
+
+   If the user works with Claude Code, also copy `dbv-specs-ops/.claude/commands/` to `.claude/commands/` in the root; if your environment protects the `.claude/` folder and you cannot write there, do not insist: ask the user to copy it. The Bootstrap will complete the remaining activation files.
+3. **Read `dbv-specs-ops/docs/MASTER_PROMPT.md` and follow its workflow.** The Bootstrap has you propose the initial configuration for the user to confirm in a single message. If the project already has code, follow `dbv-specs-ops/docs/ADOPTION_PROMPT.md`.
+4. Do not run `git init` or delete/reset any file without the user's explicit confirmation.
+
+</details>
 
 ---
 
 ## 📑 Table of Contents
 
+- [Get Started in a Minute](#start)
 - [Key Features](#features)
+- [How It Differs from Other SDD Frameworks](#comparison)
 - [Origin & Inspiration](#origin)
 - [Visual Workflow](#workflow)
 - [The 6 Development Phases](#phases)
 - [File Structure](#structure)
 - [Platform Activation](#platforms)
-- [Quick Start](#quickstart)
+- [Manual Installation](#manual)
 - [Adopting an Existing Project](#adoption)
 - [Upgrading an Existing Project](#upgrade)
 - [Example Usage](#example)
@@ -26,12 +78,6 @@
 - [Status](#status)
 - [Authors & Credits](#credits)
 - [Inspiration & References](#references)
-
----
-
-**dbv-specs-ops** is a lightweight engineering system designed to maximize software quality and context persistence in AI-assisted development.
-
-This repository acts as a **master blueprint** that transforms your AI assistant from a simple code generator into a Senior Software Engineer that follows rigorous processes.
 
 ---
 
@@ -52,6 +98,47 @@ This repository acts as a **master blueprint** that transforms your AI assistant
 *   **Formalized Parallel Work (`docs/PARALLEL_WORK.md`)**: Concrete `git worktree` mechanics for running 2-3 independent AI sessions in parallel, plus a portable pattern for scoped read-only subtasks.
 *   **Optional Maintain Phase — Loop Closure (`docs/MAINTAIN.md`)**: A deterministic monitor can trigger a read-only AI diagnosis that writes a new `[Detected]` entry into `SPECIFICATIONS.md`, re-entering the cycle at `/plan` — disabled by default, never deploys or merges on its own.
 *   **Native Claude Code Commands (`.claude/commands/`)**: `/spec /plan /build /test /code-simplify /ship /maintain` ship as real slash commands with autocomplete, not just chat text.
+*   **Open `AGENTS.md` Standard Compatible**: A thin `AGENTS.md` pointer (read by Codex, Cursor, Copilot, Windsurf, Jules, Zed and others) carries the same rules as `CLAUDE.md` and `GEMINI.md` without duplicating content: everything lives in `MASTER_PROMPT.md`.
+*   **Spec-to-Test Traceability (`REQ-NN` ↔ `@spec`)**: Every new requirement gets a unique ID in `SPECIFICATIONS.md`; code and tests cite it with `@spec REQ-NN`, and the linter reports requirements that are untagged, untested or duplicated. It is optional and backward-compatible: requirements without an ID in earlier projects keep working unchanged.
+*   **Deterministic Linter (`scripts/dbv-lint.py`)**: Python standard library only (3.8+). It checks the single-`return` rule with Guard Clauses through the AST, the `implementation_plan.md` Frontmatter and traceability. With `--changed` or `--staged` (pre-commit) it only looks at what you touch, so a legacy codebase is not flooded with warnings.
+*   **Adversarial Review with Evidence and Confidence**: The `<builder>` vs `<adversary>` debate in `/plan` must cite its source (`<evidence>`) and self-assess confidence on three axes (`<confidence_score>`: edge cases, security, concurrency). A `low` axis forces a stop and a request for validation.
+*   **Hot/Warm/Cold Context Compression**: A protocol that keeps `memory.md` from degrading the AI's attention in long-lived projects (recent ADRs in full, older ones in one line, history in `memory.archive.md`).
+*   **Subagent Contracts (Scope Lock)**: Each parallel session declares which files it may touch and which requirement-ID range it reserves, to avoid collisions between branches (`docs/PARALLEL_WORK.md`).
+*   **Native Desktop (Tauri v2) & Hybrid AI**: Production guides for desktop apps and a three-tier AI engine (local models, cloud with the key in the OS-native keyring, subscription agents via ACP), with Rust-specific standards (`Result` in IPC commands, no `.unwrap()` at runtime) and bundler-less frontend standards (IIFE).
+*   **Phase Graph (`docs/PROCEDURAL_GRAPH.json`)**: The cycle is described as transitions with a `condition` (the gate to move on), `guidance` (how to run the phase) and `pitfalls` (what to avoid), including the way back (Plan → Spec, Test → Build, Simplify → Build). Each phase command receives only its 2-hop neighborhood, generated with `scripts/pg-guide.py`, and the linter fails if a command drifts from the graph. Inspired by *[Procedural Graphs](https://arxiv.org/abs/2609.09153)* (Google).
+*   **Rejection Memory**: A section of `memory.md` that records approaches that were tried and discarded (an architecture rejected in the Architect Review, a reverted fix or refactor). The AI checks it before proposing, so no session repeats a path that already failed.
+
+---
+
+<a name="comparison"></a>
+## 🆚 How Does It Differ from GitHub Spec Kit, BMAD or Kiro?
+
+Other SDD frameworks such as [Spec Kit](https://github.com/github/spec-kit), [BMAD](https://github.com/bmad-code-org/BMAD-METHOD) or [Kiro](https://kiro.dev/) cover the specify → plan → implement flow very well. **dbv-specs-ops** shares that flow and adds the rest of the engineering and product delivery lifecycle, backed by deterministic checks:
+
+| Capability | **dbv-specs-ops (v3.1)** | [**GitHub Spec Kit**](https://github.com/github/spec-kit) | [**BMAD Method**](https://github.com/bmad-code-org/BMAD-METHOD) | [**Kiro (AWS)**](https://kiro.dev/) |
+| :--- | :---: | :---: | :---: | :---: |
+| **Specify and plan before coding** | ✅ | ✅ | ✅ | ✅ |
+| **Specs as project files** | ✅ | ✅ | ✅ | ✅ |
+| **Persistent project rules for the AI** | ✅ | ✅ | ✅ | ✅ |
+| **One-sentence start (no CLI to install)** | ✅ | ❌ | ❌ | ⚠️ Web version |
+| **Automatic author headers in code** | ✅ | ❌ | ❌ | ❌ |
+| **Requirement → code and tests traceability (`@spec`)** | ✅ | ⚠️ | ⚠️ | ⚠️ |
+| **Own deterministic linter (0 deps)** | ✅ | ❌ | ❌ | ❌ |
+| **Sites ready for GEO and Agents (`llms.txt`, MCP)** | ✅ | ➖ | ➖ | ➖ |
+| **Desktop apps (Win/Mac/Linux) + MS Store / Brew** | ✅ | ➖ | ➖ | ➖ |
+| **AI-Native architecture (Local, Cloud, ACP/MCP)** | ✅ | ➖ | ➖ | ➖ |
+| **Auto-generated cross-platform `start` / `stop` scripts** | ✅ | ➖ | ➖ | ➖ |
+| **Git, Changelog and `/ship` management** | ✅ | ⚠️ Partial | ⚠️ Partial | ⚠️ Partial |
+| **Adversarial review of plans and code** | ✅ | ⚠️ Quality gates | ⚠️ Adversarial lenses | ⚠️ Upfront analysis |
+| **Phase gates injected into each command (phase graph)** | ✅ | ⚠️ Optional quality gates | ⚠️ Gates inside some skills | ⚠️ Approval between phases |
+| **Memory of discarded approaches** | ✅ | ❌ | ⚠️ Observed pitfalls | ❌ |
+| **Community and maturity (GitHub ⭐, 2026-10-15)** | ❌ 29 ⭐ | ✅ 141 k ⭐ | ✅ 54 k ⭐ | ➖ AWS product |
+| **Ecosystem and extensibility** | ⚠️ | ✅ | ✅ | ✅ |
+| **Integrated IDE / visual interface** | ❌ | ❌ | ❌ | ✅ |
+
+✅ Yes · ⚠️ Partial or a different approach · ❌ Not stated in its official documentation · ➖ Out of scope. Checked against the official sites of [Spec Kit](https://github.com/github/spec-kit), [BMAD](https://github.com/bmad-code-org/BMAD-METHOD) and [Kiro](https://kiro.dev/) on 2026-10-15 (the phase-graph and discarded-approaches rows, on 2026-10-16). And yes: by stars, **dbv-specs-ops is the last of the three open-source projects**. The full comparison also spells out its limitations.
+
+👉 **[See the full, detailed technical comparison in `docs/COMPARISON.en.md`](docs/COMPARISON.en.md)**
 
 ---
 
@@ -67,6 +154,7 @@ This workflow is a unified, simplified version of industry pillars, adapted to b
 5. **[The New SDLC With Vibe Coding (Google/Addy Osmani et al.)](https://www.kaggle.com/whitepaper-the-new-SDLC-with-vibe-coding):** The theoretical foundation for **Agentic Engineering** (transitioning from prompting to a controlled codebase factory model, Evals, and Harness engineering).
 6. **[Agent Plugins](https://agent-plugins.org/specification):** The **vendor-neutral standard** (by Google, Amazon, Microsoft, OpenAI, Vercel) for packaging Agent Skills and MCP servers into a portable unit, integrated under `docs/AGENT_PLUGINS.md`.
 7. **[The AI-Native SDLC Playbook (Anthropic)](https://claude.com/blog/the-ai-native-sdlc-playbook):** The blueprint for **closing the loop** — adapted, vendor-agnostically, as the optional Maintain phase (`docs/MAINTAIN.md`), layered code review with severities (`docs/REVIEW.md`), deterministic guardrails (`docs/GUARDRAILS.md`), and formalized parallel worktree sessions (`docs/PARALLEL_WORK.md`).
+8. **[Procedural Graphs: Self-Evolving Execution Structures for LLM Agents (Google, Lu et al., 2026)](https://arxiv.org/abs/2609.09153):** **Procedural memory** as a graph: the phase cycle as transitions with `condition`, `guidance` and `pitfalls` (`docs/PROCEDURAL_GRAPH.json`), a local 2-hop context per phase instead of every rule at once, and the **Rejection Memory** in `memory.md`. Adapted, not copied: what was taken and what was not, in [`docs/PROCEDURAL_GRAPHS.md`](./docs/PROCEDURAL_GRAPHS.md).
 
 ---
 
@@ -94,10 +182,10 @@ Each phase has a **trigger command** you can type in the chat at any time. The A
 
 | # | Phase | Command | What the AI does | What you do | Output |
 |---|---|---|---|---|---|
-| 1 | **Spec** | `/spec` | Reviews if the requirement is defined in `SPECIFICATIONS.md`. If not, asks clarifying questions before acting. | Describe the feature or change you need. | Updated `SPECIFICATIONS.md` |
+| 1 | **Spec** | `/spec` | Reviews if the requirement is defined in `SPECIFICATIONS.md`. If not, asks clarifying questions before acting. Gives every new requirement an ID (`REQ-NN`). | Describe the feature or change you need. | Updated `SPECIFICATIONS.md` |
 | 2 | **Plan** | `/plan` | **Architect Review:** Validates specs for edge cases first. If valid, breaks the work into atomic steps. For complex tasks, creates `implementation_plan.md` and waits for explicit approval. | Review and approve the plan. | `task.md` + `implementation_plan.md` |
-| 3 | **Build** | `/build` | Implements logic incrementally. Adds file headers, sets up `venv` for Python, generates startup scripts, updates `CHANGELOG.md [Unreleased]`. | Sit back. Review the code if you wish. | Source code + `CHANGELOG.md` updated |
-| 4 | **Test** | `/test` | Creates and runs unit or integration tests. A task is **not marked as done** without a passing test. Fixes found bugs and logs them in `CHANGELOG.md`. | Run the tests if you want to confirm locally. | Test files + `CHANGELOG.md` updated |
+| 3 | **Build** | `/build` | Implements logic incrementally. Adds file headers, sets up the virtual environment for Python (with `uv` when available), tags code that implements a requirement with `@spec REQ-NN`, generates startup scripts for servers and APIs, updates `CHANGELOG.md [Unreleased]`. | Sit back. Review the code if you wish. | Source code + `CHANGELOG.md` updated |
+| 4 | **Test** | `/test` | Creates and runs unit or integration tests, citing in each one the requirement it validates (`@spec REQ-NN`). A task is **not marked as done** without a passing test. Fixes found bugs and logs them in `CHANGELOG.md`. | Run the tests if you want to confirm locally. | Test files + `CHANGELOG.md` updated |
 | 5 | **Simplify** | `/code-simplify` | Runs the layered review (`docs/REVIEW.md`: Bugs / Security / Compliance) then refactors for clarity. No new features — only polish and Critical fixes. "Clarity over cleverness." | Optional: review and validate the refactor. | Cleaner, simpler code |
 | 6 | **Ship** | `/ship` | Blocks if Critical review findings remain. Updates `README.md`, completes `walkthrough.md`, asks for version type (Patch / Minor / Major), publishes `CHANGELOG.md`, proposes git commit + tag. | Choose the version type and confirm. | Versioned release 🚀 |
 
@@ -106,7 +194,7 @@ Each phase has a **trigger command** you can type in the chat at any time. The A
 > **Optional Phase 7 — Maintain (`/maintain`):** Closes the loop without a human trigger. A deterministic
 > monitor (CI/cron watching a metric) can invoke the AI read-only to diagnose a deviation and write it as a
 > new `[Detected]` entry in `SPECIFICATIONS.md`, which then re-enters the cycle at `/plan` like any other
-> requirement. Disabled by default — enable it in `project.config.md`. See [`docs/MAINTAIN.md`](./dbv-specs-ops/docs/MAINTAIN.md).
+> requirement. Disabled by default — enable it in `project.config.md`. See [`docs/MAINTAIN.md`](./docs/MAINTAIN.md).
 
 ---
 
@@ -118,37 +206,44 @@ All control files of the framework reside inside the `dbv-specs-ops/` folder:
 #### `/dbv-specs-ops/docs` folder:
 | File | Purpose |
 |---|---|
-| [`MASTER_PROMPT.md`](./dbv-specs-ops/docs/MASTER_PROMPT.md) | The brain of the system. Rules, workflow and constraints the AI must follow. |
-| [`SPECIFICATIONS.md`](./dbv-specs-ops/docs/SPECIFICATIONS.md) | The "What" and "Why". Problem, objectives and acceptance criteria. |
-| [`ARCHITECTURE.md`](./dbv-specs-ops/docs/ARCHITECTURE.md) | The "How". Tech stack, design decisions and system structure. |
-| [`DESIGN.md`](./dbv-specs-ops/docs/DESIGN.md) | The "Look". Visual design system: color tokens, typography, spacing and UI components. *(Optional for projects without UI)* |
-| [`DESIGN_ENRICHMENT.md`](./dbv-specs-ops/docs/DESIGN_ENRICHMENT.md) | Optional guide for visual audits and reverse-engineering design tokens (Impeccable & SkillUI). |
-| [`WEB_TO_DESKTOP_MIGRATION.md`](./dbv-specs-ops/docs/WEB_TO_DESKTOP_MIGRATION.md) | Strategic decisions for turning an existing web app into a native desktop app. Read **before** `NATIVE_DESKTOP_APPS.md`. *(Only when the code already exists as a web app)* |
-| [`NATIVE_DESKTOP_APPS.md`](./dbv-specs-ops/docs/NATIVE_DESKTOP_APPS.md) | Desktop app architecture (Tauri v2) & 8 design lessons. *(Optional for web projects)* |
-| [`NATIVE_APPS_RELEASE_CI.md`](./dbv-specs-ops/docs/NATIVE_APPS_RELEASE_CI.md) | Cross-platform GitHub Actions CI/CD for native desktop binaries. *(Optional for web projects)* |
-| [`MARKETPLACE_PUBLISHING.md`](./dbv-specs-ops/docs/MARKETPLACE_PUBLISHING.md) | App marketplace submission guide & checklist (Microsoft Store, Uptodown, etc.). *(Optional for web projects)* |
-| [`REVIEW.md`](./dbv-specs-ops/docs/REVIEW.md) | Review passes and severities (Bugs / Security / Compliance, including `<coding_standards>`) used by `/code-simplify`. |
-| [`GUARDRAILS.md`](./dbv-specs-ops/docs/GUARDRAILS.md) | Deterministic guardrails (git/CI) that back up advisory prompt rules. *(Optional)* |
-| [`PARALLEL_WORK.md`](./dbv-specs-ops/docs/PARALLEL_WORK.md) | `git worktree` mechanics for running independent AI sessions in parallel (Orchestrator Mode). |
-| [`SOURCE_OF_TRUTH.md`](./dbv-specs-ops/docs/SOURCE_OF_TRUTH.md) | How to coexist with an external system (Jira, ServiceNow, etc.). *(Optional)* |
-| [`METRICS.md`](./dbv-specs-ops/docs/METRICS.md) | Leading/lagging indicators per phase, readable from git history alone. *(Optional)* |
-| [`MAINTAIN.md`](./dbv-specs-ops/docs/MAINTAIN.md) | Optional Phase 7 — autonomous loop closure. See callout above. |
+| [`MASTER_PROMPT.md`](./docs/MASTER_PROMPT.md) | The brain of the system. Rules, workflow and constraints the AI must follow. |
+| [`SPECIFICATIONS.md`](./docs/SPECIFICATIONS.md) | The "What" and "Why". Problem, objectives and acceptance criteria. |
+| [`ARCHITECTURE.md`](./docs/ARCHITECTURE.md) | The "How". Tech stack, design decisions and system structure. |
+| [`DESIGN.md`](./docs/DESIGN.md) | The "Look". Visual design system: color tokens, typography, spacing and UI components. *(Optional for projects without UI)* |
+| [`DESIGN_ENRICHMENT.md`](./docs/DESIGN_ENRICHMENT.md) | Optional guide for visual audits and reverse-engineering design tokens (Impeccable & SkillUI). |
+| [`WEB_TO_DESKTOP_MIGRATION.md`](./docs/WEB_TO_DESKTOP_MIGRATION.md) | Strategic decisions for turning an existing web app into a native desktop app. Read **before** `NATIVE_DESKTOP_APPS.md`. *(Only when the code already exists as a web app)* |
+| [`NATIVE_DESKTOP_APPS.md`](./docs/NATIVE_DESKTOP_APPS.md) | Desktop app architecture (Tauri v2) & 8 design lessons. *(Optional for web projects)* |
+| [`AI_DESKTOP_ARCHITECTURE.md`](./docs/AI_DESKTOP_ARCHITECTURE.md) | Hybrid AI assistant integration (Local, Cloud & ACP Agents with subscription). Secure OS keyring secrets. |
+| [`NATIVE_APPS_RELEASE_CI.md`](./docs/NATIVE_APPS_RELEASE_CI.md) | Cross-platform GitHub Actions CI/CD for native desktop binaries. *(Optional for web projects)* |
+| [`MARKETPLACE_PUBLISHING.md`](./docs/MARKETPLACE_PUBLISHING.md) | App marketplace submission guide & checklist (Microsoft Store, Uptodown, etc.). *(Optional for web projects)* |
+| [`templates/`](./docs/templates/) | AI specification templates (`AI_SPECIFICATIONS.template.md`), bilingual user guide templates (`IA.template.md`, `IA.en.template.md`) and clean `task.md` / `memory.md` templates (`task.template.md`, `memory.template.md`). |
+| [`REVIEW.md`](./docs/REVIEW.md) | Review passes and severities (Bugs / Security / Compliance, including `<coding_standards>`) used by `/code-simplify`. |
+| [`GUARDRAILS.md`](./docs/GUARDRAILS.md) | Deterministic guardrails (git/CI) that back up advisory prompt rules. *(Optional)* |
+| [`PARALLEL_WORK.md`](./docs/PARALLEL_WORK.md) | `git worktree` mechanics for running independent AI sessions in parallel (Orchestrator Mode). |
+| [`SOURCE_OF_TRUTH.md`](./docs/SOURCE_OF_TRUTH.md) | How to coexist with an external system (Jira, ServiceNow, etc.). *(Optional)* |
+| [`METRICS.md`](./docs/METRICS.md) | Leading/lagging indicators per phase, readable from git history alone. *(Optional)* |
+| [`MAINTAIN.md`](./docs/MAINTAIN.md) | Optional Phase 7 — autonomous loop closure. See callout above. |
+| [`PROCEDURAL_GRAPH.json`](./docs/PROCEDURAL_GRAPH.json) | The phase cycle as transitions with `condition` / `guidance` / `pitfalls`. Single source of the blocks in `.claude/commands/`. |
+| [`PROCEDURAL_GRAPHS.md`](./docs/PROCEDURAL_GRAPHS.md) | Guide to the phase graph and the Rejection Memory: what was taken from *Procedural Graphs* and what was not, and how to change the graph safely. *(In Spanish)* |
 
 #### `/dbv-specs-ops/` (Framework Root):
 | File | Purpose |
 |---|---|
-| [`project.config.md`](./dbv-specs-ops/project.config.md) | Project identity: name, author, license and file header template. Filled by the AI during the bootstrap interview. |
-| [`CHANGELOG.md`](./dbv-specs-ops/CHANGELOG.md) | Version history. The AI updates the `[Unreleased]` section during `/build` and `/test`, and publishes it on each `/ship`. |
-| [`task.md`](./dbv-specs-ops/task.md) | The logbook. Quantitative progress (checklist), backlog, and **Context Snapshots**. |
-| [`evals/`](./dbv-specs-ops/evals/) + [`scripts/run-evals.sh`](./dbv-specs-ops/scripts/run-evals.sh) | *(Optional)* Regression suite for the agent's own configuration (`MASTER_PROMPT.md` and activation files) — not for your project's code. See `evals/README.md`. |
-| [`memory.md`](./dbv-specs-ops/memory.md) | **Context and Decisions.** Qualitative knowledge: active context, technical decisions (ADRs), lessons learned, and relations map. AI must consult it at session start. |
-| [`implementation_plan.md`](./dbv-specs-ops/implementation_plan.md) | Created at the `/plan` phase. Detailed technical plan for the AI to fill in and get approved before building. |
-| [`walkthrough.md`](./dbv-specs-ops/walkthrough.md) | Created at the `/ship` phase. Summary of what was built, tested and delivered. |
+| [`project.config.md`](./project.config.md) | Project identity: name, author, license and file header template. Filled by the AI during the bootstrap interview. |
+| [`CHANGELOG.md`](./CHANGELOG.md) | Version history. The AI updates the `[Unreleased]` section during `/build` and `/test`, and publishes it on each `/ship`. |
+| [`task.md`](./task.md) | The logbook. Quantitative progress (checklist), backlog, and **Context Snapshots**. |
+| [`evals/`](./evals/) + [`scripts/run-evals.sh`](./scripts/run-evals.sh) | *(Optional)* Regression suite for the agent's own configuration (`MASTER_PROMPT.md` and activation files) — not for your project's code. See `evals/README.md`. |
+| [`scripts/dbv-lint.py`](./scripts/dbv-lint.py) | Deterministic linter (Python 3.8+, no dependencies): single-`return` rule through the AST, plan Frontmatter, `@spec` traceability and the phase graph. `python dbv-specs-ops/scripts/dbv-lint.py --help`. |
+| [`scripts/release-notes.py`](./scripts/release-notes.py) | GitHub Release from the CHANGELOG (Python 3.8+, `gh`): extracts a version's section (English first when `CHANGELOG.en.md` exists) and creates the Release; `/ship` offers it once per project. |
+| [`scripts/pg-guide.py`](./scripts/pg-guide.py) | Phase graph (Python 3.8+, no dependencies): validates its structure, prints a phase's context (`--node build`) and regenerates the command blocks (`--write-commands`). |
+| [`memory.md`](./memory.md) | **Context and Decisions.** Qualitative knowledge: active context, technical decisions (ADRs), lessons learned, **Rejection Memory** (discarded approaches) and relations map. AI must consult it at session start. |
+| `implementation_plan.md` | Created at the `/plan` phase. Detailed technical plan for the AI to fill in and get approved before building. |
+| `walkthrough.md` | Created at the `/ship` phase. Summary of what was built, tested and delivered. |
 
 #### Framework root (this repo):
 | File | Purpose |
 |---|---|
-| [`.claude/commands/`](./.claude/commands/) | *(Optional, Claude Code only)* Native slash commands for each phase (`/spec` … `/maintain`) with autocomplete. |
+| [`.claude/commands/`](./.claude/commands/) | *(Optional, Claude Code only)* Native slash commands for each phase (`/spec` … `/maintain`) with autocomplete; each one carries its phase context, generated from the graph. |
 
 ---
 
@@ -161,16 +256,21 @@ Each AI assistant loads context differently. Use the corresponding file:
 |---|---|---|
 | **Claude Code** (CLI / VS Code / Desktop) | `CLAUDE.md` | Automatic at session start |
 | **GitHub Copilot** (VS Code / JetBrains) | `.github/copilot-instructions.md` | Automatic in the workspace |
-| **Cursor** | `CLAUDE.md` (compatible) | Automatic |
+| **Cursor** | `AGENTS.md` (or `CLAUDE.md`, compatible) | Automatic |
 | **Antigravity** (VS Code · by Google DeepMind) | `GEMINI.md` (auto) + `ANTIGRAVITY.md` (docs & extra setup) | Automatic (+ optional manual KI setup) |
-| **Windsurf** | `.windsurfrules` | Automatic |
+| **Windsurf** | `.windsurfrules` (or `AGENTS.md`) | Automatic |
+| **OpenAI Codex, Jules, Zed, Aider, JetBrains Junie and other agents** ([AGENTS.md open standard](https://agents.md)) | `AGENTS.md` | Automatic |
 | **ChatGPT / Gemini Web** | `docs/MASTER_PROMPT.md` | Manual: attach or paste in the first message |
 | **Gemini CLI** | `GEMINI.md` | Automatic |
 
+> **About `AGENTS.md`:** it is an open standard stewarded by the Agentic AI Foundation (Linux Foundation). This framework ships it as a thin pointer carrying the same rules as `CLAUDE.md` and `GEMINI.md`. Claude Code (≥ 2.1.277) only reads `AGENTS.md` when no `CLAUDE.md` exists, so with both files nothing is loaded twice. Gemini CLI only reads it if you add `"AGENTS.md"` to `context.fileName` in its `settings.json`; by default it uses `GEMINI.md`.
+
 ---
 
-<a name="quickstart"></a>
-## 🚀 Quick Start & Integration (Subfolder Isolation)
+<a name="manual"></a><a name="quickstart"></a>
+## 🛠️ Manual Installation (Subfolder Isolation)
+
+> These are the steps the AI follows for you in [Get Started in a Minute](#start). Use them if you prefer to install it by hand.
 
 This framework is designed to live in a dedicated subdirectory (`dbv-specs-ops/`) inside your project's workspace. This keeps your root folder clean, avoids overwriting project files, and keeps SDD metadata isolated.
 
@@ -205,16 +305,26 @@ Since AI assistants only load configuration files from the workspace root direct
     Please follow the SDD rules and files located in `dbv-specs-ops/`.
     Master prompt is at `dbv-specs-ops/docs/MASTER_PROMPT.md`.
     ```
+*   **For Codex, Cursor, Jules, Zed, Aider and other compatible agents (`AGENTS.md` in root).** If you already have your own `AGENTS.md`, add these lines at the top instead of overwriting it:
+    ```markdown
+    # AGENTS.md
+    Please follow the SDD rules and files located in `dbv-specs-ops/`.
+    Master prompt is at `dbv-specs-ops/docs/MASTER_PROMPT.md`.
+    ```
 
-#### Step 3 — Open your AI assistant and kick off the session
-Depending on your project state, write the following to your AI assistant:
+#### Step 3 — Kick off the session
+Simply write `/spec` (or paste `dbv-specs-ops/docs/MASTER_PROMPT.md` if using a manual interface like ChatGPT web). The AI will start the Engineering Interview to define the application requirements, filling out `dbv-specs-ops/docs/SPECIFICATIONS.md`.
 
-*   **For New Projects (Quick Start):**
-    Simply write `/spec` (or paste `dbv-specs-ops/docs/MASTER_PROMPT.md` if using a manual interface like ChatGPT web). The AI will start the Engineering Interview to define the application requirements, filling out `dbv-specs-ops/docs/SPECIFICATIONS.md`.
-*   <a name="adoption"></a>**For Existing Projects (Adoption):**
-    Type the following message:
-    > "Adapt this project to the SDD methodology using the framework configuration inside the `dbv-specs-ops` folder. Refer to `dbv-specs-ops/docs/ADOPTION_PROMPT.md` for instructions."
-    The AI will analyze your existing files and run the interview to populate the SDD files under `dbv-specs-ops/`.
+---
+
+<a name="adoption"></a>
+## 🔍 Adopting an Existing Project
+
+If your project already has code, install the framework (with the message from [Get Started in a Minute](#start) or the [manual installation](#manual)) and write to your AI assistant:
+
+> "Adapt this project to the SDD methodology using the framework configuration inside the `dbv-specs-ops` folder. Refer to `dbv-specs-ops/docs/ADOPTION_PROMPT.md` for instructions."
+
+The AI will analyze your existing files and run the interview to populate the SDD files under `dbv-specs-ops/`.
 
 ---
 
@@ -227,30 +337,32 @@ Already using dbv-specs-ops and want to get the latest features? You only need *
 
 > **[⬇️ Download UPGRADE_PROMPT.md](https://raw.githubusercontent.com/davidbuenov/dbv-specs-ops/master/docs/UPGRADE_PROMPT.md)**
 >
-> Right-click → Save As → save it as `docs/UPGRADE_PROMPT.md` inside your project.
+> Right-click → Save As → save it as `dbv-specs-ops/docs/UPGRADE_PROMPT.md` inside your project.
 
 #### Step 2 — Tell your AI
 
 ```
-Read docs/UPGRADE_PROMPT.md and upgrade my project.
+Read dbv-specs-ops/docs/UPGRADE_PROMPT.md and upgrade my project.
 ```
 
 That's it. The AI detects your current version, calculates what needs updating, and applies only the framework files.
 
 #### What the AI will do
-- ✅ Detect your current framework version (reads `project.config.md` or asks you)
+- ✅ Detect your current framework version (reads `dbv-specs-ops/project.config.md` or asks you)
 - ✅ Download and update only the framework files that changed since your version
-- ✅ Add new optional files if missing (e.g. `docs/DESIGN.md` for UI projects)
+- ✅ Add new optional files if missing (e.g. `dbv-specs-ops/docs/DESIGN.md` for UI projects)
 - ✅ Show you a full summary of every change applied
+
+> **Upgrading to v3.2.0 breaks nothing you already have.** Your specifications, backlog, `memory.md` and code are not touched. Requirements without an ID keep working, and `REQ-NN` IDs are only required for what you write from now on. The AI adds the *Rejection Memory* section to your `memory.md` the first time it has something to record.
 
 #### What the AI will NEVER touch
 
 | File | Why it's protected |
 |---|---|
-| `docs/SPECIFICATIONS.md` | Your project requirements |
-| `docs/ARCHITECTURE.md` | Your technical decisions |
-| `task.md` | Your backlog and project state |
-| `CHANGELOG.md` | Your version history |
+| `dbv-specs-ops/docs/SPECIFICATIONS.md` | Your project requirements |
+| `dbv-specs-ops/docs/ARCHITECTURE.md` | Your technical decisions |
+| `dbv-specs-ops/task.md` and `dbv-specs-ops/memory.md` | Your backlog, state and decisions |
+| `dbv-specs-ops/CHANGELOG.md` | Your version history |
 | `README.md` | Your project documentation |
 | All source code | Your application |
 
@@ -316,7 +428,7 @@ Fork, create a descriptive branch, and open a Pull Request. See the Contributing
 <a name="status"></a>
 ## 🛠 Status
 
-* **Version:** 2.8.0
+* **Version:** 3.2.0
 * **Methodology:** Spec-Driven Development (SDD)
 * **Goal:** Universal AI-assisted development template for any platform and assistant.
 
@@ -348,6 +460,7 @@ Fork, create a descriptive branch, and open a Pull Request. See the Contributing
 | **[Claude Code](https://claude.ai/code)** · *Anthropic* | Main agent: document structure design, prompt engineering, platform files, methodology refinement. |
 | **[Antigravity](https://antigravity.google)** · *Google DeepMind* | Antigravity-specific integration, planning artifacts design, compatibility testing. |
 | **[Gemini](https://gemini.google.com)** · *Google* | Methodology validation and adoption flow testing on existing projects. |
+| **[Gemini 4 Argon](https://gemini.google.com)** · *Google* | v3.0.0 design conversation (outside the code): architecture analysis and proposals for Spec-to-Test traceability, deterministic governance and context compression. |
 | **[ChatGPT](https://chatgpt.com)** · *OpenAI* | Manual flow review and `MASTER_PROMPT.md` compatibility with non-auto-loading models. |
 
 > "The vision was human. The methodology was a conversation."
@@ -366,3 +479,4 @@ Fork, create a descriptive branch, and open a Pull Request. See the Contributing
 * **[SkillUI](https://github.com/amaancoderx/npxskillui)** — Amaan Coder (Design System Reverse Engineering CLI)
 * **[Agent Plugins Specification](https://agent-plugins.org/specification)** — TSC of Core Maintainers (Google, Amazon, Microsoft, OpenAI, Vercel)
 * **[The AI-Native SDLC Playbook](https://claude.com/blog/the-ai-native-sdlc-playbook)** — Anthropic (loop closure, layered review, deterministic guardrails, parallel worktree sessions)
+* **[Procedural Graphs: Self-Evolving Execution Structures for LLM Agents](https://arxiv.org/abs/2609.09153)** — Yuxing Lu, Yicheng Chen, Shanchan Wu & Sercan Ö. Arık (Google, Georgia Tech, Peking University; arXiv:2609.09153, September 2026) (phase graph, local context, Rejection Memory)
