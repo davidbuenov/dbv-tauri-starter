@@ -27,6 +27,7 @@
 - [x] **Entrega**: versión 0.4.0 en `package.json`, `package-lock.json`, `Cargo.toml`, `Cargo.lock` y `tauri.conf.json`; `CHANGELOG.md`; README con tecnologías y GIF de la configuración de IA; commit, tag `template-v0.4.0` y push.
 
 ## Deuda / Pendiente
+- **Regla Store para MCP / subprocesos externos (ADR-037):** Al empaquetar una app para Microsoft Store que exponga un modo CLI o servidor MCP secundario (`--mcp`) para agentes como Antigravity o Claude Code, es obligatorio declarar `appExecutionAliases` en `gen/windows/bundle.config.json` y resolver el comando a `%LOCALAPPDATA%\Microsoft\WindowsApps\<alias>.exe` con `symlink_metadata` para evitar `Acceso denegado` en `C:\Program Files\WindowsApps`.
 - Sin verificar en Linux y macOS (módulos ES con `import()` en WebKitGTK/WKWebView) ni dentro de un paquete MSIX.
 - `README.en.md` no existe: el enlace «Back to the README» de `docs/IA.en.md` (que viene de la plantilla común) apunta a él.
 - Copilot: el primer mensaje tras instalar la CLI respondió *Internal error* y los siguientes funcionaron; si se repite tras elegir modelo con ⚙️, revisar si su modo ACP acepta `--model`.
