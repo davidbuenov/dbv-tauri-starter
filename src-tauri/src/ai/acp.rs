@@ -93,20 +93,23 @@ pub fn agent_command(spec: &AgentSpec) -> Result<(PathBuf, Vec<String>), AiError
             if cfg!(target_os = "linux") { vec!["--uid=".into()] } else { Vec::new() },
         ),
         "copilot" => (need("copilot")?, vec!["--acp".into()]),
+        // Cursor y OpenCode, con los comandos que usa el Unreal Assistant de UE 5.9: `agent acp` (la CLI de Cursor
+        // se llamaba `cursor-agent` y se renombró a `agent`) y `opencode acp`.
+        "cursor" => (
+            which("cursor-agent").or_else(|| which("agent")).ok_or_else(|| AiError::Config("no se encuentra la CLI de Cursor («agent» o «cursor-agent») en el PATH".into()))?,
+            vec!["acp".into()],
+        ),
+        "opencode" => (need("opencode")?, vec!["acp".into()]),
         other => return Err(AiError::Config(format!("agente desconocido: {other}"))),
     };
 
-    let clean_model = spec
-        .model
-        .as_deref()
-        .map(str::trim)
-        .filter(|m| !m.is_empty() && *m != spec.id && *m != "antigravity" && *m != "agy");
+    let clean_model = resolve_clean_model(spec);
 
     match spec.id.as_str() {
         "claude" => {
             // @agentclientprotocol/claude-agent-acp recibe el modelo y el esfuerzo por variable de entorno y session/set_config_option.
         }
-        "codex" | "antigravity" | "agy" => {
+        "codex" | "antigravity" | "agy" | "cursor" | "opencode" => {
             // Sin flags: un flag desconocido hace que el adaptador imprima la ayuda y termine. El modelo
             // llega por entorno (`agent_env`) y por `session/set_config_option`.
         }
@@ -123,14 +126,26 @@ pub fn agent_command(spec: &AgentSpec) -> Result<(PathBuf, Vec<String>), AiError
     Ok((program, prefix))
 }
 
+fn resolve_clean_model(spec: &AgentSpec) -> Option<&str> {
+    let raw = spec.model.as_deref().map(str::trim).filter(|m| !m.is_empty())?;
+    if spec.id == "claude" && matches!(raw, "claude" | "claude-sonnet" | "default") {
+        return Some("claude-sonnet-5-5");
+    }
+    if raw == spec.id || raw == "antigravity" || raw == "agy" {
+        return None;
+    }
+    Some(raw)
+}
+
 /// Variables de entorno adicionales para configurar el modelo y esfuerzo al lanzar el agente ACP.
 pub fn agent_env(spec: &AgentSpec) -> Vec<(String, String)> {
+    agent_env_with_bin(spec, which("claude").as_deref())
+}
+
+/// Variables de entorno adicionales permitiendo inyectar la ruta al binario de Claude para tests deterministas.
+pub fn agent_env_with_bin(spec: &AgentSpec, claude_bin: Option<&Path>) -> Vec<(String, String)> {
     let mut envs = Vec::new();
-    let clean_model = spec
-        .model
-        .as_deref()
-        .map(str::trim)
-        .filter(|m| !m.is_empty() && *m != spec.id && *m != "antigravity" && *m != "agy");
+    let clean_model = resolve_clean_model(spec);
     let clean_effort = spec
         .reasoning_effort
         .as_deref()
@@ -139,6 +154,9 @@ pub fn agent_env(spec: &AgentSpec) -> Vec<(String, String)> {
 
     match spec.id.as_str() {
         "claude" => {
+            if let Some(bin) = claude_bin {
+                envs.push(("CLAUDE_CODE_EXECUTABLE".into(), bin.to_string_lossy().to_string()));
+            }
             if let Some(model) = clean_model {
                 envs.push(("ANTHROPIC_MODEL".into(), model.into()));
             }
@@ -349,7 +367,18 @@ fn send_request(running: &Running, method: &str, params: Value) -> Result<onesho
 async fn await_response(receiver: oneshot::Receiver<Result<Value, Value>>) -> Result<Value, AiError> {
     match receiver.await {
         Ok(Ok(value)) => Ok(value),
-        Ok(Err(error)) => Err(AiError::BadRequest(error["message"].as_str().map(str::to_string).unwrap_or_else(|| error.to_string()))),
+        Ok(Err(error)) => {
+            let detail = error.get("data")
+                .and_then(|d| d.get("details"))
+                .and_then(Value::as_str);
+            let msg = match (error["message"].as_str(), detail) {
+                (Some(m), Some(d)) => format!("{m}: {d}"),
+                (Some(m), None) => m.to_string(),
+                (None, Some(d)) => d.to_string(),
+                (None, None) => error.to_string(),
+            };
+            Err(AiError::BadRequest(msg))
+        }
         Err(_) => Err(AiError::Network("el agente se cerró".into())),
     }
 }
@@ -574,6 +603,24 @@ mod tests {
         assert!(agent_command(&AgentSpec::new("custom")).is_err());
     }
 
+    /// Cursor (`agent acp` o `cursor-agent acp`) y OpenCode (`opencode acp`), como en el Unreal Assistant de UE 5.9:
+    /// sin `--model` (el modelo lo elige su propia CLI); si no están instalados, el error dice cuál falta.
+    #[test]
+    fn cursor_y_opencode_se_lanzan_con_acp_y_sin_flags_de_modelo() {
+        for (id, missing) in [("cursor", "Cursor"), ("opencode", "opencode")] {
+            let spec = AgentSpec { id: id.into(), model: Some(id.into()), reasoning_effort: Some("high".into()) };
+            match agent_command(&spec) {
+                Ok((_bin, args)) => {
+                    assert_eq!(args.last().map(String::as_str), Some("acp"), "{id}: {args:?}");
+                    assert!(!args.iter().any(|a| a == "--model" || a == id), "{id}: {args:?}");
+                }
+                Err(error) => assert!(error.to_string().contains(missing), "{id}: {error}"),
+            }
+            assert!(agent_env(&spec).is_empty(), "{id}: sin variables propias");
+        }
+        assert!(crate::ai::detect::TOOLS.contains(&"opencode") && crate::ai::detect::TOOLS.contains(&"agent") && crate::ai::detect::TOOLS.contains(&"cursor-agent"));
+    }
+
     #[test]
     fn agent_command_con_modelo_anade_flag() {
         let spec = AgentSpec {
@@ -616,7 +663,26 @@ mod tests {
             model: Some("claude-sonnet-5-5".into()),
             reasoning_effort: Some("high".into()),
         };
-        assert_eq!(agent_env(&claude_spec), vec![("ANTHROPIC_MODEL".to_string(), "claude-sonnet-5-5".to_string())]);
+        assert_eq!(
+            agent_env_with_bin(&claude_spec, None),
+            vec![("ANTHROPIC_MODEL".to_string(), "claude-sonnet-5-5".to_string())]
+        );
+        assert_eq!(
+            agent_env_with_bin(&claude_spec, Some(Path::new("C:\\bin\\claude.exe"))),
+            vec![
+                ("CLAUDE_CODE_EXECUTABLE".to_string(), "C:\\bin\\claude.exe".to_string()),
+                ("ANTHROPIC_MODEL".to_string(), "claude-sonnet-5-5".to_string())
+            ]
+        );
+        let claude_generic_spec = AgentSpec {
+            id: "claude".into(),
+            model: Some("claude".into()),
+            reasoning_effort: Some("medium".into()),
+        };
+        assert_eq!(
+            agent_env_with_bin(&claude_generic_spec, None),
+            vec![("ANTHROPIC_MODEL".to_string(), "claude-sonnet-5-5".to_string())]
+        );
     }
 
     /// Agente falso en Node (`tests/fixtures/fake-acp-agent.mjs`): responde a

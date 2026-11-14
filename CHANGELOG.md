@@ -13,6 +13,19 @@ el prefijo `template-v` en los tags de git (`template-vX.Y.Z`) — deliberadamen
 
 ---
 
+## [template-v0.5.0] — 2026-11-14
+
+### Changed — la conexión a IAs, al día con `dbv-unreal-ai` 0.6.0
+
+Los ficheros canónicos (`detect.rs`, `connections.rs`, `acp.rs`, `connectWizard.js`, `acpSession.js`, `tests/ai/acp.test.js`) vuelven a ser idénticos a los de `dbv-unreal-ai` (`node scripts/sync-ai.mjs --check ../dbv-unreal-ai` ✅). Para llevarlo a otra app: `node scripts/sync-ai.mjs --apply ../<app>` y revisar los puntos `[REVISAR]`.
+
+- **Guardar sin `os error 17` en la versión de la Microsoft Store:** las apps guardan con un temporal y un renombrado, y en un paquete MSIX `%APPDATA%` está virtualizado: renombrar entre la carpeta virtual y la real falla con *«El sistema no puede mover el archivo a otra unidad de disco»* (un usuario de DBV Unreal AI no podía conectar Claude Code). Nueva `connections::replace_file`: si el renombrado falla, escribe directamente. La usan `connections.rs`, `store.rs` y `files.rs`; cada app debe usarla también en sus propios guardados. Con tests.
+- **Agentes Cursor y OpenCode:** `cursor-agent acp` (o `agent acp`, su nombre nuevo) y `opencode acp`, con los mismos comandos que el Unreal Assistant de UE 5.9; detectados en el asistente de conexión, con enlace de instalación y nombre traducido.
+- **ACP más robusto:** modelo por defecto de cada agente (`resolveAgentModel`, `DEFAULT_AGENT_MODELS`; «claude» a secas pasa a `claude-sonnet-5-5`), `CLAUDE_CODE_EXECUTABLE` para el adaptador de Claude, el detalle del error del agente en el mensaje, una sesión ACP por conversación con los mensajes previos al abrirla, y consultas sueltas (`askAside`) en una sesión aparte sin acceso a nada.
+- **Uso de tokens por conversación** en vez de por proyecto.
+
+---
+
 ## [template-v0.4.0] — 2026-10-29
 
 ### Changed — el starter es la implementación de referencia de la conexión a IAs de todas las apps DBV

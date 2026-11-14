@@ -21,7 +21,7 @@ import { AI_TRANSLATIONS } from './translations.js';
 import { proposeNudge, runAgent } from './agentLoop.js';
 import { createProposalApplier } from './applyProposal.js';
 import { createChatPanel, mentionedPaths } from './chatPanel.js';
-import { createConnectWizard } from './connectWizard.js';
+import { createConnectWizard, DEFAULT_AGENT_MODELS, resolveAgentModel } from './connectWizard.js';
 import { createAcpSession, insideProject } from './acpSession.js';
 import { createChangesCard, createPermissionCard } from './acpView.js';
 import { buildContext, estimateTokens, systemPrompt } from './context.js';
@@ -46,7 +46,7 @@ export const agentId = (connection) => String(connection?.baseUrl ?? '').replace
 
 /** Conversación nueva. */
 export function newConversation() {
-  return { id: `c${Date.now().toString(36)}`, title: '', createdAt: Date.now(), entries: [] };
+  return { id: `c${Date.now().toString(36)}`, title: '', createdAt: Date.now(), entries: [], usage: { input: 0, output: 0 } };
 }
 
 /** Título a partir del primer mensaje. */
@@ -146,16 +146,19 @@ export function createAiApp(deps) {
         const saved = await backend.aiSetPreferences({ active: id });
         if (saved.ok) file = saved.value;
         // Otra conexión: el agente que estuviera en marcha se cierra.
-        if (activeConnection()?.provider !== 'agent' && acp.sessionId) acp.stop();
+        if (acp.sessionId) acp.stop();
         renderDestination();
       },
       onSelectConversation: (id) => {
+        if (!projectState || id === projectState.activeId) return;
+        resetConversationSession();
         projectState.activeId = id;
         renderConversation();
         persist();
       },
       onNewConversation: () => {
         if (!projectState) return;
+        resetConversationSession();
         const fresh = newConversation();
         projectState.conversations.unshift(fresh);
         projectState.activeId = fresh.id;
@@ -174,6 +177,7 @@ export function createAiApp(deps) {
           ],
         });
         if (choice !== 'delete' && choice !== 'all') return;
+        resetConversationSession();
         projectState.conversations = choice === 'all' ? [] : projectState.conversations.filter((c) => c.id !== projectState.activeId);
         if (!projectState.conversations.length) projectState.conversations.push(newConversation());
         projectState.activeId = projectState.conversations[0].id;
@@ -242,15 +246,28 @@ export function createAiApp(deps) {
     }, 400);
   }
 
+  function resetConversationSession() {
+    if (busy) stop();
+    if (acp.sessionId) acp.stop();
+  }
+
+  function renderConversationUsage(current) {
+    const u = current?.usage;
+    panel.setUsage(u && (u.input || u.output) ? t('ai.usage').replace('{input}', String(u.input)).replace('{output}', String(u.output)) : '');
+    panel.setSpeed('');
+  }
+
   function renderConversation() {
     const current = conversation();
     if (!current) {
       panel.clearMessages();
+      renderConversationUsage(null);
       panel.addNote(t('ai.noDocument'));
       return;
     }
     panel.setConversations(projectState.conversations, projectState.activeId);
     panel.clearMessages();
+    renderConversationUsage(current);
     for (const entry of current.entries) {
       if (entry.role === 'user') panel.addUser(entry.content);
       else if (entry.role === 'assistant') panel.addAssistant(entry.content);
@@ -635,8 +652,8 @@ export function createAiApp(deps) {
       if (result.outcome === 'cancelled') panel.addNote(t('ai.stopped'));
       if (proposal.files.size) showProposal(proposal, check);
       if (result.usage.input || result.usage.output) {
-        projectState.usage = { input: (projectState.usage?.input ?? 0) + result.usage.input, output: (projectState.usage?.output ?? 0) + result.usage.output };
-        panel.setUsage(t('ai.usage').replace('{input}', String(projectState.usage.input)).replace('{output}', String(projectState.usage.output)));
+        current.usage = { input: (current.usage?.input ?? 0) + result.usage.input, output: (current.usage?.output ?? 0) + result.usage.output };
+        panel.setUsage(t('ai.usage').replace('{input}', String(current.usage.input)).replace('{output}', String(current.usage.output)));
       }
     } finally {
       busy = false;
@@ -771,16 +788,22 @@ export function createAiApp(deps) {
     agentTurn = { proposal: createProposal(), bubble };
     let finalText = '';
     try {
+      const id = agentId(connection);
       const spec = {
-        id: agentId(connection),
-        model: connection.model || undefined,
-        reasoningEffort: connection.reasoningEffort || undefined,
+        id,
+        model: resolveAgentModel(id, connection.model) || undefined,
+        reasoningEffort: connection.reasoningEffort || 'medium',
       };
       panel.addStep(t('ai.agentStarting').replace('{agent}', providerName(connection)));
-      const session = await acp.ensureSession(spec);
+      const session = await acp.ensureSession(spec, current.id);
       const active = activeSource();
+      const prior = session.fresh ? historyMessages(current.entries.slice(0, -1), 4000) : [];
+      const priorText = prior.length
+        ? `Prior messages in this conversation:\n${prior.map((entry) => `${entry.role === 'user' ? 'User' : 'Assistant'}: ${entry.content}`).join('\n\n')}`
+        : '';
       const context = [
         agentPreamble(session.fresh),
+        priorText,
         active ? `Open document: ${active.path} (cursor at character ${active.cursor})` : '',
         active?.selection ? `Selected text:\n${active.selection}` : '',
         ...attachments.map((a) => `Attached ${a.kind === 'section' ? 'section' : 'document'} ${a.path}:\n${a.content}`),
@@ -792,9 +815,9 @@ export function createAiApp(deps) {
       bubble.finish();
       finalText = bubble.text?.() ?? '';
       const usage = turn.result.value?.usage;
-      if (usage) {
-        projectState.usage = { input: (projectState.usage?.input ?? 0) + (usage.inputTokens ?? 0), output: (projectState.usage?.output ?? 0) + (usage.outputTokens ?? 0) };
-        panel.setUsage(t('ai.usage').replace('{input}', String(projectState.usage.input)).replace('{output}', String(projectState.usage.output)));
+      if (usage && (usage.inputTokens || usage.outputTokens)) {
+        current.usage = { input: (current.usage?.input ?? 0) + (usage.inputTokens ?? 0), output: (current.usage?.output ?? 0) + (usage.outputTokens ?? 0) };
+        panel.setUsage(t('ai.usage').replace('{input}', String(current.usage.input)).replace('{output}', String(current.usage.output)));
       }
       if (agentTurn.proposal.files.size) showProposal(agentTurn.proposal, makeChecker());
       if (turn.changes.length) panel.addNode(createChangesCard(turn.changes, { undo: undoDiskChange, open: (relative) => host.openDocument(relative) }));
@@ -825,7 +848,8 @@ export function createAiApp(deps) {
       name: t(`ai.agent.${tool.name}`),
       provider: 'agent',
       baseUrl: `acp:${tool.name}`,
-      model: tool.name,
+      model: DEFAULT_AGENT_MODELS[tool.name] ?? tool.name,
+      reasoningEffort: 'medium',
       hasKey: false,
       contextTokens: null,
       supportsTools: true,

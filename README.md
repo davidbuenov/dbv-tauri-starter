@@ -2,7 +2,7 @@
 
 # dbv-tauri-starter
 
-[![Release template-v0.4.0](https://img.shields.io/badge/Release-template--v0.4.0-2ea44f?style=flat&logo=github&logoColor=white)](https://github.com/davidbuenov/dbv-tauri-starter/releases)
+[![Release template-v0.5.0](https://img.shields.io/badge/Release-template--v0.5.0-2ea44f?style=flat&logo=github&logoColor=white)](https://github.com/davidbuenov/dbv-tauri-starter/releases)
 [![License MIT](https://img.shields.io/badge/License-MIT-green.svg?style=flat)](./LICENSE)
 [![Windows](https://img.shields.io/badge/Windows-10_%2F_11_(WebView2)-0078D7?style=flat&logo=windows&logoColor=white)](./dbv-specs-ops/docs/NATIVE_APPS_RELEASE_CI.md)
 [![macOS](https://img.shields.io/badge/macOS-Universal_(.dmg)-000000?style=flat&logo=apple&logoColor=white)](./dbv-specs-ops/docs/NATIVE_APPS_RELEASE_CI.md)

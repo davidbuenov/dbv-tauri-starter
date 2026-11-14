@@ -25,6 +25,8 @@ export const INSTALL_LINKS = {
   gemini: 'https://github.com/google-gemini/gemini-cli',
   codex: 'https://github.com/openai/codex',
   copilot: 'https://docs.github.com/en/copilot/how-tos/copilot-cli/set-up-copilot-cli/install-copilot-cli',
+  cursor: 'https://cursor.com/cli',
+  opencode: 'https://opencode.ai/docs/',
   node: 'https://nodejs.org',
 };
 
@@ -49,6 +51,16 @@ const DEFAULT_AGENT_LABELS = {
   codex: 'GPT-6-Luna',
   gemini: 'Gemini 3.8 Pro',
   copilot: 'Claude Sonnet 5.5',
+};
+
+/** Modelo concreto por defecto de cada agente CLI cuando la conexión aún guarda el id genérico. */
+export const DEFAULT_AGENT_MODELS = {
+  antigravity: 'gemini-4-argon',
+  agy: 'gemini-4-argon',
+  claude: 'claude-sonnet-5-5',
+  codex: 'gpt-6-luna',
+  gemini: 'gemini-4-argon',
+  copilot: 'claude-sonnet-5-5',
 };
 
 const KNOWN_MODEL_LABELS = {
@@ -119,13 +131,26 @@ export function normalizeAgentModels(rawList, fallbackId = 'default') {
 
 function isGenericOrCorruptedModel(modelId, agentKey) {
   if (!modelId) return true;
-  if (modelId === agentKey || ['antigravity', 'agy', 'claude', 'codex', 'gemini', 'copilot', 'claude-sonnet'].includes(modelId)) {
+  if (modelId === agentKey || ['antigravity', 'agy', 'claude', 'codex', 'gemini', 'copilot', 'cursor', 'opencode', 'claude-sonnet', 'default'].includes(modelId)) {
     return true;
   }
   if (modelId.includes('|') || modelId.includes('**') || modelId.length > 64) {
     return true;
   }
   return false;
+}
+
+/**
+ * Resuelve el identificador de modelo real que se debe pasar al agente ACP:
+ * si la conexión tiene un id genérico (`"claude"`, `"codex"`…), usa el modelo
+ * por defecto que muestra la interfaz (`DEFAULT_AGENT_MODELS`).
+ */
+export function resolveAgentModel(agentKey, rawModel) {
+  let result = rawModel;
+  if (isGenericOrCorruptedModel(rawModel, agentKey)) {
+    result = DEFAULT_AGENT_MODELS[agentKey] || rawModel || agentKey;
+  }
+  return result;
 }
 
 /**
@@ -501,6 +526,12 @@ export function createConnectWizard({ host, backend, onChanged, onAgent, notify 
     // Otros agentes estándar
     for (const tool of detection.tools.filter((x) => ['claude', 'gemini', 'codex', 'copilot'].includes(x.name))) {
       appendAgentItem(tool, tool.name, t(`ai.agent.${tool.name}`));
+    }
+    // Cursor (`agent acp`, antes `cursor-agent`) y OpenCode (`opencode acp`), con los comandos que usa el Unreal Assistant de UE 5.9.
+    if (detection.tools.length > 0) {
+      const cursor = detection.tools.find((x) => ['cursor-agent', 'agent'].includes(x.name) && x.path) ?? detection.tools.find((x) => x.name === 'agent');
+      appendAgentItem(cursor ? { ...cursor, name: 'cursor' } : null, 'cursor', t('ai.agent.cursor'));
+      appendAgentItem(detection.tools.find((x) => x.name === 'opencode') ?? null, 'opencode', t('ai.agent.opencode'));
     }
     if (detection.tools.length > 0) {
       agentCard.append(agentList);
