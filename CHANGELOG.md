@@ -13,6 +13,18 @@ el prefijo `template-v` en los tags de git (`template-vX.Y.Z`) — deliberadamen
 
 ---
 
+## [template-v0.5.1] — 2026-11-15
+
+### Fixed — Claude Code y Codex arrancan con Node.js en una ruta con espacios (de `dbv-unreal-ai` 0.6.2)
+
+Los ficheros canónicos `detect.rs` y `acp.rs` vuelven a ser idénticos a los de `dbv-unreal-ai` (`node scripts/sync-ai.mjs --check ../dbv-unreal-ai` ✅).
+
+- **Se elimina `launcher()` (`cmd.exe /d /s /c <ruta>`):** partía `C:\Program Files\nodejs\npx.cmd` en el espacio («"C:\Program" no se reconoce como un comando interno o externo»), así que Claude Code y Codex no arrancaban con Node.js en su carpeta por defecto. Ahora el `.cmd` se lanza por su ruta y `std::process::Command` pone las comillas y escapa cada argumento: un `&` en un argumento (p. ej. un nombre de modelo escrito en Ajustes) ya no lo ejecuta `cmd.exe` como otra orden.
+- **Test nuevo** que lanza de verdad un `.cmd` desde una carpeta `Program Files\nodejs` temporal y comprueba que los argumentos (con espacio y con `&`) llegan intactos. Gracias a **Victor Osuna**, que detectó el fallo en la v0.6.1 de DBV Unreal AI.
+- **Para llevarlo a otra app:** `node scripts/sync-ai.mjs --apply ../<app>`. Una app que llame a `detect::launcher` en código propio debe pasar a `Command::new(ruta)`.
+
+---
+
 ## [template-v0.5.0] — 2026-11-14
 
 ### Changed — la conexión a IAs, al día con `dbv-unreal-ai` 0.6.0
