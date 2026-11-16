@@ -13,6 +13,20 @@ el prefijo `template-v` en los tags de git (`template-vX.Y.Z`) — deliberadamen
 
 ---
 
+## [template-v0.5.2] — 2026-11-16
+
+### Fixed — los agentes ACP preguntan antes de editar (y pueden quedar en solo lectura)
+
+Lo encontró dbv-md-reader probando Claude Code: el agente editaba los ficheros en disco **sin pedir permiso**, aunque la app muestra una tarjeta de permiso para cada edición. Causa (leída en el adaptador `@agentclientprotocol/claude-agent-acp`, `session-mode.js`): Claude Code arranca en el modo `auto`, que no pregunta, y ninguna app DBV fijaba el modo de la sesión.
+
+- **`acpSession.js` lee los modos que anuncia el agente** en `session/new` (`modes: { currentModeId, availableModes }`), los devuelve en `ensureSession(…)` y en `session.modes`, y sigue los cambios que hace el propio agente (`current_mode_update`, que llega además a la interfaz como `{ type: 'mode' }`).
+- **`session.setMode(modeId)`** pide `session/set_mode`, solo para un modo que el agente haya anunciado.
+- **`pickPermissionMode(modes, 'ask' | 'readOnly')`**, pura: elige el modo que **pregunta** antes de editar (`default` en Claude, `read-only` en Codex) o el que **no edita** (`plan` en Claude), y nunca uno que concede permisos solo (`auto`, `acceptEdits`, `bypassPermissions`, `full-access`). Devuelve `null` si el agente no tiene ninguno, y la app decide qué hacer.
+- **El `aiApp.js` de referencia fija el modo `ask`** al abrir la sesión, así que la tarjeta de permiso vuelve a aparecer.
+- **Para llevarlo a otra app:** `node scripts/sync-ai.mjs --apply ../<app>` y, en su `aiApp.js`, llamar a `pickPermissionMode(session.modes, 'ask')` + `acp.setMode(…)` tras `ensureSession`, como el de referencia.
+
+---
+
 ## [template-v0.5.1] — 2026-11-15
 
 ### Fixed — Claude Code y Codex arrancan con Node.js en una ruta con espacios (de `dbv-unreal-ai` 0.6.2)

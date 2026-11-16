@@ -22,7 +22,7 @@ import { proposeNudge, runAgent } from './agentLoop.js';
 import { createProposalApplier } from './applyProposal.js';
 import { createChatPanel, mentionedPaths } from './chatPanel.js';
 import { createConnectWizard, DEFAULT_AGENT_MODELS, resolveAgentModel } from './connectWizard.js';
-import { createAcpSession, insideProject } from './acpSession.js';
+import { createAcpSession, insideProject, pickPermissionMode } from './acpSession.js';
 import { createChangesCard, createPermissionCard } from './acpView.js';
 import { buildContext, estimateTokens, systemPrompt } from './context.js';
 import { adviceMessages, createModelInfoLookup, effectiveContext } from './modelAdvice.js';
@@ -796,6 +796,9 @@ export function createAiApp(deps) {
       };
       panel.addStep(t('ai.agentStarting').replace('{agent}', providerName(connection)));
       const session = await acp.ensureSession(spec, current.id);
+      // El agente pide permiso antes de editar o ejecutar (Claude Code arranca en `auto`, que no pregunta).
+      const askMode = pickPermissionMode(session.modes, 'ask');
+      if (askMode) await acp.setMode(askMode);
       const active = activeSource();
       const prior = session.fresh ? historyMessages(current.entries.slice(0, -1), 4000) : [];
       const priorText = prior.length
